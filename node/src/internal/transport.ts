@@ -136,3 +136,140 @@ export class Transport {
         response = await this.#fetchWithTimeout(url, { method, headers, ...(payload === undefined ? {} : { body: payload }) }, signal);
       } catch (error) {
         if (error instanceof AbortedError) throw error;
+        const timeout = error instanceof ConnectionError && error.code === 'TIMEOUT';
+        if (mode === 'safe' && attempt < this.#options.maxRetries) {
+          await this.#options.sleep(this.#backoff(attempt), signal);
+          continue;
+        }
+        const reason = error instanceof Error ? error.message.replace(/\?[^\s"']*/g, '?…') : String(error);
+        let message = `Could not reach the LabPay API (${method} ${path}): ${reason}`;
+        if (mode === 'throttled-only') {
+          message += ' The request may have been processed; it was not retried automatically.';
+        }
+        throw new ConnectionError(message, timeout ? 'TIMEOUT' : 'CONNECTION_ERROR');
+      }
+
+      const responseHeaders: Record<string, string> = {};
+      response.headers.forEach((value, name) => {
+        responseHeaders[name.toLowerCase()] = value;
+      });
+      const text = await response.text();
+      const mode_ = responseHeaders['x-labyrinthe-mode'];
+      this.#lastResponse = {
+        status: response.status,
+        headers: responseHeaders,
+        mode: mode_ === 'live' || mode_ === 'test' ? mode_ : null,
+      };
+
+      if (response.status >= 200 && response.status < 300) {
+        return { status: response.status, body: decode(text), headers: responseHeaders };
+      }
+
+      const parsed = tryDecode(text);
+      if (params.paymentOnRefusal === true && response.status === 422 && hasPayment(parsed)) {
+        return { status: response.status, body: parsed, headers: responseHeaders };
+      }
+
+      const error = errorFromResponse(response.status, parsed, responseHeaders);
+      if (attempt < this.#options.maxRetries) {
+        const delay = this.#retryDelay(mode, error, attempt);
+        if (delay !== null) {
+          await this.#options.sleep(delay, signal);
+          continue;
+        }
+      }
+      throw error;
+    }
+  }
+
+  #url(path: string, query: Record<string, QueryValue> | undefined): string {
+    const search = new URLSearchParams();
+    for (const [name, value] of Object.entries(query ?? {})) {
+      if (value === undefined || value === null || value === '') continue;
+      search.append(name, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
+    }
+    const qs = search.toString();
+    return `${this.#options.baseUrl}${path}${qs === '' ? '' : `?${qs}`}`;
+  }
+
+  async #fetchWithTimeout(url: string, init: RequestInit, signal: AbortSignal | undefined): Promise<Response> {
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, this.#options.timeoutMs);
+    const onAbort = (): void => {
+      controller.abort();
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+    try {
+      return await this.#options.fetch(url, { ...init, signal: controller.signal });
+    } catch (error) {
+      if (signal?.aborted === true) {
+        throw new AbortedError('The request was aborted.', 'REQUEST_ABORTED');
+      }
+      if (timedOut) {
+        throw new ConnectionError(`timed out after ${this.#options.timeoutMs} ms`, 'TIMEOUT');
+      }
+      throw error instanceof LabPayError ? error : new ConnectionError(error instanceof Error ? error.message : String(error), 'CONNECTION_ERROR');
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+    }
+  }
+
+  #retryDelay(mode: RetryMode, error: ApiError, attempt: number): number | null {
+    const retryAfter = retryAfterMs(error.headers['retry-after']);
+    if (REFUSED_BEFORE_PROCESSING.includes(error.code)) {
+      return retryAfter !== null && retryAfter <= this.#options.maxRetryWaitMs ? retryAfter : null;
+    }
+    if (error.status === 429) {
+      if (error.code !== 'TOO_MANY_REQUESTS') return null;
+      if (retryAfter !== null) return retryAfter <= this.#options.maxRetryWaitMs ? retryAfter : null;
+      return this.#backoff(attempt);
+    }
+    return mode === 'safe' && error.status >= 500 ? this.#backoff(attempt) : null;
+  }
+
+  /** Backoff exponentiel avec gigue : 0,5 s, 1 s, 2 s… (50 à 100 %), plafonné. */
+  #backoff(attempt: number): number {
+    const delay = Math.min(MAX_BACKOFF_MS, BASE_DELAY_MS * 2 ** attempt);
+    return Math.min(this.#options.maxRetryWaitMs, delay * (0.5 + Math.random() * 0.5));
+  }
+
+  toJSON(): Record<string, unknown> {
+    return { baseUrl: this.#options.baseUrl, maxRetries: this.#options.maxRetries };
+  }
+}
+
+function retryAfterMs(header: string | undefined): number | null {
+  if (header === undefined) return null;
+  const value = header.trim();
+  if (/^\d+(\.\d+)?$/.test(value)) return Number(value) * 1000;
+  const date = Date.parse(value);
+  return Number.isNaN(date) ? null : Math.max(0, date - Date.now());
+}
+
+function decode(text: string): unknown {
+  if (text.trim() === '') return {};
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new UnexpectedResponseError('Unexpected API response: the body is not valid JSON.', 'UNEXPECTED_RESPONSE');
+  }
+}
+
+function tryDecode(text: string): unknown {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function hasPayment(body: unknown): boolean {
+  if (typeof body !== 'object' || body === null) return false;
+  const data = (body as Record<string, unknown>)['data'];
+  return typeof data === 'object' && data !== null && 'id' in data;
+}
