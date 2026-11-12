@@ -129,3 +129,133 @@ export class InvalidRequestError extends ApiError {}
 export class ValidationError extends InvalidRequestError {}
 
 /** 422 `INVALID_PHONE_NUMBER`. */
+export class InvalidPhoneNumberError extends InvalidRequestError {}
+
+/** 422 `AMOUNT_TOO_SMALL`, `AMOUNT_TOO_LARGE` or `AMOUNT_OUT_OF_BOUNDS`: the message gives the limit. */
+export class AmountOutOfRangeError extends InvalidRequestError {}
+
+/** 422 `INSUFFICIENT_BALANCE`: nothing was sent. */
+export class InsufficientBalanceError extends InvalidRequestError {}
+
+/** 429: too many requests for this token (120 per minute); see `retryAfter`. */
+export class RateLimitError extends ApiError {}
+
+/** 429 `DAILY_LIMIT_REACHED`: token not enabled for production yet. Never retried automatically. */
+export class DailyLimitReachedError extends RateLimitError {}
+
+/** 5xx: maintenance, operation disabled, provider closed, aggregator unavailable, server error. */
+export class ServiceUnavailableError extends ApiError {}
+
+/**
+ * The API could not be reached or did not answer in time (`CONNECTION_ERROR`, `TIMEOUT`).
+ *
+ * For a deposit, payout or refund this does NOT mean the payment failed: it
+ * may have been created. Send the same request again with the same
+ * `reference`, or look it up with `payments.findByReference()`.
+ */
+export class ConnectionError extends LabPayError {}
+
+/** The request was aborted with your AbortSignal (`REQUEST_ABORTED`). */
+export class AbortedError extends LabPayError {}
+
+/** Invalid input, detected by the SDK before any request (`INVALID_ARGUMENT`). */
+export class InvalidArgumentError extends LabPayError {
+  constructor(message: string) {
+    super(message, 'INVALID_ARGUMENT');
+  }
+}
+
+/** The API answered something the SDK cannot read (`UNEXPECTED_RESPONSE`). */
+export class UnexpectedResponseError extends LabPayError {}
+
+/** Wrong or missing notification signature, or timestamp out of tolerance: answer 400. */
+export class SignatureVerificationError extends LabPayError {
+  constructor(message: string) {
+    super(message, 'SIGNATURE_VERIFICATION_FAILED');
+  }
+}
+
+/** Correctly signed body that is not a valid notification: answer 400. */
+export class InvalidWebhookPayloadError extends LabPayError {
+  constructor(message: string) {
+    super(message, 'INVALID_WEBHOOK_PAYLOAD');
+  }
+}
+
+type ApiErrorClass = new (message: string, code: ErrorCode, status: number, errors?: FieldErrors, headers?: Record<string, string>) => ApiError;
+
+const BY_CODE: Record<string, ApiErrorClass> = {
+  UNAUTHENTICATED: AuthenticationError,
+  TOKEN_BLOCKED: PermissionError,
+  MERCHANT_INACTIVE: PermissionError,
+  KYC_REQUIRED: PermissionError,
+  LIVE_TOKEN_REQUIRED: PermissionError,
+  PAYMENT_NOT_FOUND: NotFoundError,
+  DEPOSIT_NOT_FOUND: NotFoundError,
+  NOTIFICATION_NOT_FOUND: NotFoundError,
+  NOT_A_PAYOUT: ConflictError,
+  NOT_CANCELLABLE: ConflictError,
+  DEPOSIT_NOT_COMPLETED: ConflictError,
+  REFUND_IN_PROGRESS: ConflictError,
+  DEPOSIT_ALREADY_REFUNDED: ConflictError,
+  VALIDATION_ERROR: ValidationError,
+  INVALID_PHONE_NUMBER: InvalidPhoneNumberError,
+  UNSUPPORTED_COUNTRY: InvalidRequestError,
+  INVALID_CURRENCY: InvalidRequestError,
+  UNSUPPORTED_PROVIDER: InvalidRequestError,
+  INVALID_AMOUNT: InvalidRequestError,
+  AMOUNT_TOO_SMALL: AmountOutOfRangeError,
+  AMOUNT_TOO_LARGE: AmountOutOfRangeError,
+  AMOUNT_OUT_OF_BOUNDS: AmountOutOfRangeError,
+  INSUFFICIENT_BALANCE: InsufficientBalanceError,
+  DAILY_LIMIT_REACHED: DailyLimitReachedError,
+  MAINTENANCE: ServiceUnavailableError,
+  API_DISABLED: ServiceUnavailableError,
+  DEPOSITS_DISABLED: ServiceUnavailableError,
+  WITHDRAWALS_DISABLED: ServiceUnavailableError,
+  PROVIDER_TEMPORARILY_UNAVAILABLE: ServiceUnavailableError,
+  GATEWAY_UNAVAILABLE: ServiceUnavailableError,
+  V2_DISABLED: ServiceUnavailableError,
+  TEST_MODE_DISABLED: ServiceUnavailableError,
+};
+
+function classForStatus(status: number): ApiErrorClass {
+  if (status === 401) return AuthenticationError;
+  if (status === 403) return PermissionError;
+  if (status === 404) return NotFoundError;
+  if (status === 409) return ConflictError;
+  if (status === 422) return InvalidRequestError;
+  if (status === 429) return RateLimitError;
+  if (status >= 500) return ServiceUnavailableError;
+  return ApiError;
+}
+
+function fieldErrors(value: unknown): FieldErrors {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return {};
+  }
+  const result: FieldErrors = {};
+  for (const [field, messages] of Object.entries(value as Record<string, unknown>)) {
+    const list = Array.isArray(messages) ? messages : [messages];
+    result[field] = list.filter((m): m is string => typeof m === 'string');
+  }
+  return result;
+}
+
+/**
+ * Maps an error response to a typed error: by code first, then by HTTP
+ * status, then a plain ApiError.
+ *
+ * @internal
+ */
+export function errorFromResponse(status: number, body: unknown, headers: Record<string, string>): ApiError {
+  const object = typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {};
+  const errors = fieldErrors(object['errors']);
+  let code = typeof object['code'] === 'string' && object['code'] !== '' ? object['code'] : undefined;
+  if (code === undefined) {
+    code = status === 429 ? 'TOO_MANY_REQUESTS' : status === 422 && Object.keys(errors).length > 0 ? 'VALIDATION_ERROR' : 'HTTP_ERROR';
+  }
+  const message = typeof object['message'] === 'string' && object['message'] !== '' ? object['message'] : `The LabPay API returned HTTP ${status}.`;
+  const ErrorClass = BY_CODE[code] ?? classForStatus(status);
+  return new ErrorClass(message, code, status, errors, headers);
+}
