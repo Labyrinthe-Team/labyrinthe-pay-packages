@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Projet parent du SDK Java LabPay.
+
+  Modules :
+  - core                 : com.labyrinthe-rdc:labpay (Java 17+, aucune dépendance d'exécution) ;
+  - spring-boot-starter  : com.labyrinthe-rdc:labpay-spring-boot-starter (Java 17+, Spring Boot 3) ;
+  - examples             : exemples compilés à chaque build, jamais publiés.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.labyrinthe-rdc</groupId>
+  <artifactId>labpay-parent</artifactId>
+  <version>0.1.0</version>
+  <packaging>pom</packaging>
+
+  <name>LabPay SDK (parent)</name>
+  <description>Official Java SDK for LabPay, the Mobile Money aggregator of the DR Congo: collect, send and refund M-Pesa, Airtel Money and Orange Money payments, and verify signed notifications.</description>
+  <url>https://pay.labyrinthe-rdc.com</url>
+  <inceptionYear>2026</inceptionYear>
+
+  <organization>
+    <name>Labyrinthe Innovations SARL</name>
+    <url>https://pay.labyrinthe-rdc.com</url>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/license/mit</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>labyrinthe</id>
+      <name>Labyrinthe Innovations SARL</name>
+      <email>contact@labyrinthe-rdc.com</email>
+      <organization>Labyrinthe Innovations SARL</organization>
+      <organizationUrl>https://pay.labyrinthe-rdc.com</organizationUrl>
+    </developer>
+  </developers>
+
+  <modules>
+    <module>core</module>
+    <module>spring-boot-starter</module>
+    <module>examples</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <!-- Builds reproductibles. -->
+    <project.build.outputTimestamp>2026-11-12T00:00:00Z</project.build.outputTimestamp>
+    <maven.compiler.release>17</maven.compiler.release>
+
+    <junit.version>5.14.3</junit.version>
+    <snakeyaml.version>2.5</snakeyaml.version>
+    <spring-boot.version>3.5.15</spring-boot.version>
+
+    <spotbugs.version>4.10.4</spotbugs.version>
+    <spotbugs-plugin.version>4.10.4.1</spotbugs-plugin.version>
+    <spotless.version>3.10.4</spotless.version>
+    <google-java-format.version>1.36.1</google-java-format.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>${junit.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.labyrinthe-rdc</groupId>
+        <artifactId>labpay</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.labyrinthe-rdc</groupId>
+        <artifactId>labpay-spring-boot-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.yaml</groupId>
+        <artifactId>snakeyaml</artifactId>
+        <version>${snakeyaml.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>3.5.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.4.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.15.0</version>
+          <configuration>
+            <release>${maven.compiler.release}</release>
+            <showWarnings>true</showWarnings>
+            <compilerArgs>
+              <arg>-Xlint:all</arg>
+              <arg>-Werror</arg>
+            </compilerArgs>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.5.6</version>
+          <configuration>
+            <trimStackTrace>false</trimStackTrace>
+          </configuration>
