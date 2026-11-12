@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SDK Java LabPay : Java 17+, java.net.http, aucune dépendance d'exécution. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.labyrinthe-rdc</groupId>
+    <artifactId>labpay-parent</artifactId>
+    <version>0.1.0</version>
+  </parent>
+
+  <artifactId>labpay</artifactId>
+  <packaging>jar</packaging>
+
+  <name>LabPay SDK</name>
+  <description>Official Java client for the LabPay API V2: deposits, payouts, refunds, payment tracking, providers, account and signed notifications. Java 17+, no runtime dependency.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Lecture de ../../openapi/openapi.yaml par le test de contrat. -->
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <!-- version.properties reçoit ${project.version} (constante Version.VERSION et User-Agent). -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <labpay.expectedVersion>${project.version}</labpay.expectedVersion>
+            <labpay.specPath>${maven.multiModuleProjectDirectory}/../openapi/openapi.yaml</labpay.specPath>
+            <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
