@@ -85,3 +85,90 @@ public static class ApiValues
         PaymentStatus.Pending => "pending",
         PaymentStatus.Completed => "completed",
         PaymentStatus.Failed => "failed",
+        _ => "unknown",
+    };
+
+    /// <summary>The API value, e.g. <c>deposit</c>.</summary>
+    /// <param name="value">The operation.</param>
+    /// <returns>The value sent by the API.</returns>
+    public static string ToApiString(this Operation value) => value switch
+    {
+        Operation.Deposit => "deposit",
+        Operation.Payout => "payout",
+        Operation.Refund => "refund",
+        _ => "unknown",
+    };
+
+    /// <summary>The API value, e.g. <c>live</c>.</summary>
+    /// <param name="value">The mode.</param>
+    /// <returns>The value sent by the API.</returns>
+    public static string ToApiString(this LabPayMode value) => value switch
+    {
+        LabPayMode.Live => "live",
+        LabPayMode.Test => "test",
+        _ => "unknown",
+    };
+
+    /// <summary>The API value, e.g. <c>delivered</c>.</summary>
+    /// <param name="value">The status.</param>
+    /// <returns>The value sent by the API.</returns>
+    public static string ToApiString(this NotificationStatus value) => value switch
+    {
+        NotificationStatus.Delivered => "delivered",
+        NotificationStatus.Pending => "pending",
+        NotificationStatus.Abandoned => "abandoned",
+        _ => "unknown",
+    };
+
+    /// <summary>The API value, e.g. <c>payment.completed</c>.</summary>
+    /// <param name="value">The event.</param>
+    /// <returns>The value sent by the API.</returns>
+    public static string ToApiString(this WebhookEventType value) => value switch
+    {
+        WebhookEventType.PaymentCompleted => "payment.completed",
+        WebhookEventType.PaymentFailed => "payment.failed",
+        _ => "unknown",
+    };
+
+    internal static PaymentStatus ParsePaymentStatus(string? value) => value switch
+    {
+        "pending" => PaymentStatus.Pending,
+        "completed" => PaymentStatus.Completed,
+        "failed" => PaymentStatus.Failed,
+        _ => PaymentStatus.Unknown,
+    };
+
+    internal static Operation ParseOperation(string? value) => value switch
+    {
+        "deposit" => Operation.Deposit,
+        "payout" => Operation.Payout,
+        "refund" => Operation.Refund,
+        _ => Operation.Unknown,
+    };
+
+    internal static LabPayMode ParseMode(string? value) => value switch
+    {
+        "live" => LabPayMode.Live,
+        "test" => LabPayMode.Test,
+        _ => LabPayMode.Unknown,
+    };
+
+    internal static NotificationStatus ParseNotificationStatus(string? value) => value switch
+    {
+        "delivered" => NotificationStatus.Delivered,
+        "pending" => NotificationStatus.Pending,
+        "abandoned" => NotificationStatus.Abandoned,
+        _ => NotificationStatus.Unknown,
+    };
+
+    internal static WebhookEventType ParseEventType(string? value) => value switch
+    {
+        "payment.completed" => WebhookEventType.PaymentCompleted,
+        "payment.failed" => WebhookEventType.PaymentFailed,
+        _ => WebhookEventType.Unknown,
+    };
+
+    /// <summary>Refuse <c>Unknown</c> dans un filtre (jamais accepté par l'API).</summary>
+    internal static string Filter(string value, string field) =>
+        value == "unknown" ? throw new InvalidArgumentException($"{field} cannot be Unknown.") : value;
+}
