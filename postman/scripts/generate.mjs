@@ -308,3 +308,312 @@ function buildEvents(operationId, operation) {
   const tests = [
     `pm.test('HTTP status documented by the spec (${documented.join(', ')})', function () {`,
     `  pm.expect(pm.response.code).to.be.oneOf(${JSON.stringify(documented)});`,
+    '});',
+  ];
+  if (MUST_SUCCEED.has(operationId)) {
+    tests.push(
+      `pm.test('Success (${success.join(', ')})', function () {`,
+      `  pm.expect(pm.response.code).to.be.oneOf(${JSON.stringify(success)});`,
+      '});',
+    );
+  }
+  tests.push(
+    "pm.test('JSON body', function () {",
+    '  pm.response.to.be.json;',
+    '});',
+    'const body = pm.response.json();',
+    'if (pm.response.code >= 200 && pm.response.code < 300) {',
+    "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+    "  pm.test('X-Labyrinthe-Mode header', function () {",
+    "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+    '  });',
+    '} else {',
+    "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+    '}',
+  );
+  const prerequest = [];
+
+  switch (operationId) {
+    case 'createDeposit':
+    case 'createPayout':
+    case 'createRefund':
+      prerequest.push(
+        '// Nouvelle référence à chaque exécution (clé d\'idempotence : la renvoyer rend le même paiement).',
+        `pm.collectionVariables.set('reference', 'POSTMAN-${operationId === 'createDeposit' ? 'DEP' : operationId === 'createPayout' ? 'PAY' : 'RFD'}-' + Date.now());`,
+      );
+      break;
+    default:
+  }
+
+  switch (operationId) {
+    case 'createDeposit':
+      tests.push(
+        'if (body.data && body.data.id) {',
+        "  pm.collectionVariables.set('paymentId', body.data.id);",
+        "  pm.test('Deposit with the reference sent', function () {",
+        "    pm.expect(body.data.operation).to.eql('deposit');",
+        "    pm.expect(body.data.reference).to.eql(pm.collectionVariables.get('reference'));",
+        "    pm.expect(body.data.status).to.be.oneOf(['pending', 'completed', 'failed']);",
+        "    pm.expect(body.data.amount).to.match(/^\\d+\\.\\d{2}$/);",
+        '  });',
+        '}',
+      );
+      break;
+    case 'createPayout':
+      tests.push("if (body.data && body.data.id) { pm.collectionVariables.set('payoutId', body.data.id); }");
+      break;
+    case 'getPayment':
+    case 'syncPayment':
+      tests.push(
+        "pm.test('Same payment', function () { pm.expect(body.data.id).to.eql(pm.collectionVariables.get('paymentId')); });",
+      );
+      break;
+    case 'listPayments':
+    case 'listNotifications':
+      tests.push(
+        "pm.test('Paginated list', function () {",
+        "  pm.expect(body.data).to.be.an('array');",
+        "  pm.expect(body.meta).to.include.keys('current_page', 'last_page', 'per_page', 'total');",
+        '});',
+      );
+      if (operationId === 'listNotifications') {
+        tests.push("if (body.data && body.data[0]) { pm.collectionVariables.set('notificationId', String(body.data[0].id)); }");
+      }
+      break;
+    case 'predictProvider':
+      tests.push(
+        "pm.test('Provider predicted', function () { pm.expect(body.data).to.include.keys('phone', 'provider', 'country'); });",
+      );
+      break;
+    case 'getAccount':
+      tests.push(
+        "pm.test('Account', function () { pm.expect(body.data).to.include.keys('mode', 'live_enabled', 'kyc_verified', 'fees'); });",
+      );
+      break;
+    default:
+  }
+
+  const events = [];
+  if (prerequest.length > 0) {
+    events.push({ listen: 'prerequest', script: { id: stableId(`pre:${operationId}`), type: 'text/javascript', exec: prerequest } });
+  }
+  events.push({ listen: 'test', script: { id: stableId(`test:${operationId}`), type: 'text/javascript', exec: tests } });
+  return events;
+}
+
+// --- Exemples de réponses ----------------------------------------------------
+// Construits depuis components.schemas.Payment.example et les codes d'erreur documentés de chaque
+// réponse (aucun champ hors spec). Les messages d'erreur sont des exemples : l'API les écrit en
+// français et peut les changer, seul `code` est stable.
+
+function payment(operation, overrides = {}) {
+  const base = { ...spec.components.schemas.Payment.example };
+  if (operation === 'payout') {
+    Object.assign(base, {
+      id: 'PAY-01JCX9A1B2C3D4E5F6G7H8J9K0',
+      reference: 'PAYOUT-17',
+      operation: 'payout',
+      amount: '5000.00',
+      fee: '175.00',
+      total_amount: '5175.00',
+      gateway_status: 'ENQUEUED',
+      metadata: { payoutId: '17' },
+    });
+    delete base.refunded_amount;
+  }
+  if (operation === 'refund') {
+    Object.assign(base, {
+      id: 'RFD-01JCXA2C3D4E5F6G7H8J9K0L1M',
+      reference: 'REFUND-42-1',
+      operation: 'refund',
+      amount: '300.00',
+      fee: '0.00',
+      total_amount: '300.00',
+      metadata: null,
+      refunded_payment_id: spec.components.schemas.Payment.example.id,
+    });
+    delete base.refunded_amount;
+  }
+  return { ...base, ...overrides };
+}
+
+function error(code, message, extra = {}) {
+  return code === null ? { message } : { message, code, ...extra };
+}
+
+function exampleBody(operationId, code) {
+  const operation = { createDeposit: 'deposit', createPayout: 'payout', createRefund: 'refund', cancelPayout: 'payout' }[operationId] ?? 'deposit';
+  switch (code) {
+    case 200:
+      if (['createDeposit', 'createPayout', 'createRefund'].includes(operationId)) return { data: payment(operation, COMPLETED) };
+      if (operationId === 'getPayment') return { data: payment('deposit', COMPLETED) };
+      if (operationId === 'syncPayment') return { data: payment('deposit', COMPLETED) };
+      if (operationId === 'cancelPayout') return { data: payment('payout', { gateway_status: 'ENQUEUED' }) };
+      return successExample(operationId);
+    case 201:
+      return { data: payment(operation) };
+    case 202:
+      if (operationId === 'resendNotification') return { data: notification({ id: 13, status: 'pending', attempts: 0, last_status_code: null, delivered_at: null, next_attempt_at: '2026-11-11T10:05:00+00:00' }) };
+      return { data: payment(operation, { gateway_status: 'UNKNOWN' }) };
+    case 401:
+      return spec.components.responses.Unauthenticated.content['application/json'].example;
+    case 403:
+      return ROTATIONS.includes(operationId)
+        ? error('LIVE_TOKEN_REQUIRED', 'Cette opération exige le token live.')
+        : error('KYC_REQUIRED', 'Vérification du compte (KYC) requise pour les paiements en production.');
+    case 404:
+      if (operationId === 'createRefund') return error('DEPOSIT_NOT_FOUND', 'Dépôt introuvable.');
+      if (operationId === 'resendNotification') return error('NOTIFICATION_NOT_FOUND', 'Notification introuvable.');
+      return error('PAYMENT_NOT_FOUND', 'Paiement introuvable.');
+    case 409:
+      return operationId === 'cancelPayout'
+        ? error('NOT_CANCELLABLE', "Ce retrait n'est plus en file d'attente.")
+        : error('REFUND_IN_PROGRESS', 'Un remboursement est déjà en cours pour ce dépôt.');
+    case 422:
+      if (['createDeposit', 'createPayout', 'createRefund'].includes(operationId)) {
+        return operationId === 'createPayout'
+          ? error('INSUFFICIENT_BALANCE', 'Solde insuffisant.')
+          : error('INVALID_PHONE_NUMBER', 'Numéro de téléphone invalide.');
+      }
+      // Sur /providers, /availability et /notifications, l'erreur de validation n'a pas de `code`.
+      if (['listProviders', 'getAvailability', 'listNotifications'].includes(operationId)) {
+        return { message: 'The selected country is invalid.', errors: { country: ['The selected country is invalid.'] } };
+      }
+      return error('VALIDATION_ERROR', 'Paramètres invalides.', { errors: { phone: ['Le numéro de téléphone est invalide.'] } });
+    case 429:
+      return { message: 'Too Many Attempts.' };
+    case 503:
+      return error('MAINTENANCE', 'Service en maintenance, réessayez plus tard.');
+    default:
+      return undefined;
+  }
+}
+
+function notification(overrides = {}) {
+  return {
+    id: 12,
+    event: 'payment.completed',
+    payment_id: spec.components.schemas.Payment.example.id,
+    url: 'https://boutique.example/webhooks/labpay',
+    status: 'delivered',
+    attempts: 1,
+    last_status_code: 200,
+    last_error: null,
+    next_attempt_at: null,
+    delivered_at: '2026-11-11T10:00:43+00:00',
+    created_at: '2026-11-11T10:00:42+00:00',
+    ...overrides,
+  };
+}
+
+function successExample(operationId) {
+  const meta = { current_page: 1, last_page: 1, per_page: 20, total: 1 };
+  switch (operationId) {
+    case 'listPayments':
+      return { data: [payment('deposit', COMPLETED)], links: { first: null, last: null, prev: null, next: null }, meta };
+    case 'listNotifications':
+      return { data: [notification()], meta };
+    case 'listCountries':
+      return {
+        data: [
+          {
+            country: 'COD',
+            name: 'République démocratique du Congo',
+            dial_code: '243',
+            currencies: ['CDF', 'USD'],
+            limits: { CDF: { min_amount: null, max_amount: null }, USD: { min_amount: null, max_amount: null } },
+            default: true,
+          },
+        ],
+      };
+    case 'listProviders':
+      return {
+        data: [
+          {
+            provider: 'VODACOM_MPESA_COD',
+            country: 'COD',
+            name: 'Vodacom M-Pesa',
+            name_displayed_to_customer: 'M-Pesa',
+            logo: null,
+            currencies: { CDF: { min_amount: null, max_amount: null, decimals: 'NONE', status: 'OPERATIONAL' } },
+          },
+        ],
+      };
+    case 'getAvailability':
+      return spec.paths['/availability'].get.responses['200'].content['application/json'].example;
+    case 'predictProvider':
+      return { data: { phone: '243813456789', provider: 'VODACOM_MPESA_COD', country: 'COD' } };
+    case 'listBalances':
+      return {
+        data: [
+          { currency: 'CDF', balance: '125000.00', updated_at: '2026-11-11T10:00:42+00:00' },
+          { currency: 'USD', balance: '0.00', updated_at: null },
+        ],
+      };
+    case 'getAccount':
+      return {
+        data: { mode: 'test', merchant: 'Boutique Exemple', live_enabled: false, kyc_verified: false, fees: { deposit_rate: '0.0350', payout_rate: '0.0350' }, test_key: 'test_xxxxxxxxxxxxxxxx' },
+      };
+    case 'rotateWebhookSecret':
+      return { data: { webhook_secret: 'whsec_xxxxxxxxxxxxxxxx', webhook_secret_previous_expires_at: '2026-11-12T10:00:00+00:00' } };
+    case 'rotateTestKey':
+      return { data: { test_key: 'test_xxxxxxxxxxxxxxxx' } };
+    default:
+      return undefined;
+  }
+}
+
+function operationsByRoute() {
+  const map = new Map();
+  for (const [path, methods] of Object.entries(spec.paths)) {
+    for (const [method, operation] of Object.entries(methods)) {
+      map.set(`${method.toUpperCase()} ${path}`, { operationId: operation.operationId, summary: operation.summary, operation });
+    }
+  }
+  return map;
+}
+
+function rawUrl(url) {
+  const path = (url.path ?? []).join('/');
+  const query = (url.query ?? []).filter((q) => !q.disabled).map((q) => `${q.key}=${q.value ?? ''}`);
+  return `{{baseUrl}}/${path}${query.length ? `?${query.join('&')}` : ''}`;
+}
+
+function setPathVariable(request, key, value) {
+  for (const v of request.url.variable ?? []) if (v.key === key) v.value = value;
+}
+
+function setBody(request, body) {
+  request.body = { mode: 'raw', raw: JSON.stringify(body, null, 2), options: { raw: { language: 'json' } } };
+}
+
+function stableId(seed) {
+  const hex = createHash('sha256').update(`labpay:${seed}`).digest('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+function seededRandom(seed) {
+  // mulberry32
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Clés triées pour une sortie stable ; l'ordre des tableaux (dossiers, requêtes, scripts) est conservé.
+function sortKeys(value) {
+  if (Array.isArray(value)) return value.map(sortKeys);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value)
+        .filter((k) => value[k] !== undefined)
+        .sort()
+        .map((k) => [k, sortKeys(value[k])]),
+    );
+  }
+  return value;
+}
