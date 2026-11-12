@@ -91,3 +91,95 @@ public sealed class MockHttp : HttpMessageHandler
 public static class Responses
 {
     public static HttpResponseMessage Json(int status, string json, params (string Name, string Value)[] headers)
+    {
+        var response = new HttpResponseMessage((HttpStatusCode)status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
+        response.Headers.TryAddWithoutValidation("X-Labyrinthe-Mode", "test");
+        foreach (var (name, value) in headers)
+        {
+            if (!response.Headers.TryAddWithoutValidation(name, value))
+            {
+                response.Content.Headers.TryAddWithoutValidation(name, value);
+            }
+        }
+
+        return response;
+    }
+}
+
+/// <summary>Client branché sur le serveur simulé ; les attentes entre relances sont enregistrées, pas subies.</summary>
+public sealed class Harness : IDisposable
+{
+    public const string Key = "test_abcdefghijklmnop";
+
+    public Harness(Action<LabPayClientOptions>? configure = null)
+    {
+        var options = new LabPayClientOptions { ApiKey = Key, BaseUrl = "https://api.example.test/api" };
+        configure?.Invoke(options);
+        Client = new LabPayClient(options, new HttpClient(Http));
+        Client.Transport.Delay = (delay, _) =>
+        {
+            Sleeps.Add(delay);
+            return Task.CompletedTask;
+        };
+        Client.Transport.Jitter = () => 1.0;
+    }
+
+    public MockHttp Http { get; } = new();
+
+    public LabPayClient Client { get; }
+
+    public List<TimeSpan> Sleeps { get; } = new();
+
+    public IReadOnlyList<RecordedRequest> Requests => Http.Requests;
+
+    public void Dispose() => Client.Dispose();
+}
+
+/// <summary>Paiements et corps JSON de test.</summary>
+public static class Fixtures
+{
+    /// <summary>Paiement de l'API ; <paramref name="overrides"/> remplace des champs (JSON brut).</summary>
+    public static string Payment(params (string Key, string Json)[] overrides)
+    {
+        var fields = new List<(string Key, string Json)>
+        {
+            ("id", "\"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\""),
+            ("reference", "\"ORDER-42\""),
+            ("operation", "\"deposit\""),
+            ("livemode", "false"),
+            ("status", "\"pending\""),
+            ("gateway_status", "\"ACCEPTED\""),
+            ("amount", "\"1000.00\""),
+            ("fee", "\"35.00\""),
+            ("total_amount", "\"1035.00\""),
+            ("currency", "\"CDF\""),
+            ("country", "\"COD\""),
+            ("phone", "\"0813456789\""),
+            ("provider", "\"VODACOM_MPESA_COD\""),
+            ("provider_transaction_id", "null"),
+            ("failure", "null"),
+            ("metadata", "{\"orderId\":\"42\"}"),
+            ("created_at", "\"2026-11-11T10:00:00+00:00\""),
+            ("completed_at", "null"),
+            ("refunded_amount", "\"0.00\""),
+        };
+        foreach (var (key, json) in overrides)
+        {
+            var index = fields.FindIndex(f => f.Key == key);
+            if (index >= 0)
+            {
+                fields[index] = (key, json);
+            }
+            else
+            {
+                fields.Add((key, json));
+            }
+        }
+
+        return "{" + string.Join(",", fields.Select(f => "\"" + f.Key + "\":" + f.Json)) + "}";
+    }
+
+    public static string PageOf(string items, int current, int last, int perPage, int total) =>
+        "{\"data\":[" + items + "],\"links\":{},\"meta\":{\"current_page\":" + current + ",\"last_page\":" + last +
+        ",\"per_page\":" + perPage + ",\"total\":" + total + "}}";
+}
