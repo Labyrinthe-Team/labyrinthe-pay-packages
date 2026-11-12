@@ -104,3 +104,108 @@ final class ErrorsAndRetryTest extends TestCase
 
     public function testRateLimitLongerThanMaxWaitIsThrown(): void
     {
+        $this->http->queue(self::json(429, ['message' => 'Too Many Attempts.'], ['Retry-After' => '60']));
+
+        try {
+            $this->client()->payments->get('DEP-1');
+            self::fail('RateLimitException expected.');
+        } catch (RateLimitException $e) {
+            self::assertSame('TOO_MANY_REQUESTS', $e->getErrorCode());
+            self::assertSame(60, $e->getRetryAfter());
+            self::assertCount(1, $this->http->requests);
+        }
+    }
+
+    public function testDailyLimitIsNeverRetried(): void
+    {
+        $this->http->queue(self::json(429, ['message' => 'Limite journalière', 'code' => 'DAILY_LIMIT_REACHED'], ['Retry-After' => '1']));
+
+        $this->expectException(DailyLimitReachedException::class);
+        try {
+            $this->client()->deposits->create(amount: '10', currency: 'CDF', phone: '0813456789');
+        } finally {
+            self::assertCount(1, $this->http->requests);
+        }
+    }
+
+    public function testServerErrorsOnReadsAreRetriedWithBackoff(): void
+    {
+        $this->http->queue(
+            self::json(503, ['message' => 'Indisponible', 'code' => 'GATEWAY_UNAVAILABLE']),
+            new Response(502, [], '<html>Bad gateway</html>'),
+            self::json(200, ['data' => []]),
+        );
+
+        self::assertSame([], $this->client()->providers->list());
+        self::assertCount(3, $this->http->requests);
+        self::assertCount(2, $this->sleeper->sleeps);
+    }
+
+    public function testMaintenanceIsOnlyRetriedWithRetryAfter(): void
+    {
+        $this->http->queue(self::json(503, ['message' => 'Maintenance', 'code' => 'MAINTENANCE']));
+
+        $this->expectException(ServiceUnavailableException::class);
+        try {
+            $this->client()->payments->get('DEP-1');
+        } finally {
+            self::assertCount(1, $this->http->requests);
+        }
+    }
+
+    public function testPaymentWithReferenceIsRetriedAfterANetworkError(): void
+    {
+        $this->http->queue(null, self::json(201, ['data' => self::payment()]));
+
+        $this->client()->deposits->create(amount: '1000', currency: 'CDF', phone: '0813456789', reference: 'ORDER-42');
+
+        self::assertCount(2, $this->http->requests);
+        // The same body (same reference) is sent again.
+        self::assertSame((string) $this->http->requests[0]->getBody(), (string) $this->http->requests[1]->getBody());
+    }
+
+    public function testPaymentWithGeneratedReferenceKeepsItAcrossRetries(): void
+    {
+        $this->http->queue(new Response(500), self::json(201, ['data' => self::payment()]));
+
+        $this->client()->deposits->create(amount: '1000', currency: 'CDF', phone: '0813456789');
+
+        self::assertCount(2, $this->http->requests);
+        self::assertSame((string) $this->http->requests[0]->getBody(), (string) $this->http->requests[1]->getBody());
+    }
+
+    public function testPaymentWithoutReferenceIsNotRetriedAfterANetworkError(): void
+    {
+        $this->http->queue(null);
+
+        try {
+            $this->client(autoReference: false)->deposits->create(amount: '1000', currency: 'CDF', phone: '0813456789');
+            self::fail('ConnectionException expected.');
+        } catch (ConnectionException $e) {
+            self::assertTrue($e->isTimeout());
+            self::assertStringContainsString('may have been processed', $e->getMessage());
+            self::assertStringNotContainsString('0813456789', $e->getMessage());
+            self::assertCount(1, $this->http->requests);
+        }
+    }
+
+    public function testRotationsAreNeverRetriedAfterAServerError(): void
+    {
+        $this->http->queue(new Response(500));
+
+        $this->expectException(ServiceUnavailableException::class);
+        try {
+            $this->client('live_token_abcdefgh')->account->rotateWebhookSecret();
+        } finally {
+            self::assertCount(1, $this->http->requests);
+        }
+    }
+
+    public function testInvalidJsonIsAnUnexpectedValue(): void
+    {
+        $this->http->queue(new Response(200, [], 'not json'));
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->client()->account->get();
+    }
+}
