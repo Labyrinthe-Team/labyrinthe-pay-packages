@@ -211,3 +211,216 @@ msgid "Test mode: no real money moves."
 msgstr ""
 
 #: includes/class-gateway.php:220
+#: assets/js/blocks.js:113
+msgid "Mobile Money number"
+msgstr ""
+
+#: includes/class-gateway.php:220
+msgid "required"
+msgstr ""
+
+#: includes/class-gateway.php:222
+#: assets/js/blocks.js:115
+msgid "You will receive a confirmation request (PIN) on this phone."
+msgstr ""
+
+#: includes/class-gateway.php:225
+#: assets/js/blocks.js:119
+msgid "Operator"
+msgstr ""
+
+#: includes/class-gateway.php:227
+#: assets/js/blocks.js:129
+msgid "Detect automatically"
+msgstr ""
+
+#: includes/class-gateway.php:240
+#: includes/class-gateway.php:263
+#: assets/js/blocks.js:81
+msgid "Enter a valid Mobile Money number (for example 0812345678 or +243812345678)."
+msgstr ""
+
+#. translators: %s: error code.
+#: includes/class-gateway.php:289
+#, php-format
+msgid "LabPay payment request not accepted: %s."
+msgstr ""
+
+#: includes/class-gateway.php:302
+msgid "Your operator refused the payment. Check your balance and your number, then try again."
+msgstr ""
+
+#. translators: 1: LabPay payment ID, 2: masked phone number.
+#: includes/class-gateway.php:315
+#, php-format
+msgid "LabPay payment %1$s requested: waiting for the customer to confirm on %2$s."
+msgstr ""
+
+#: includes/class-gateway.php:343
+msgid "Only a paid order can be refunded with LabPay."
+msgstr ""
+
+#: includes/class-gateway.php:347
+msgid "The refund amount must be greater than zero."
+msgstr ""
+
+#. translators: %s: error from LabPay.
+#: includes/class-gateway.php:365
+#, php-format
+msgid "LabPay refused the refund: %s"
+msgstr ""
+
+#. translators: %s: failure code.
+#: includes/class-gateway.php:372
+#, php-format
+msgid "The LabPay refund failed (%s): no money was sent."
+msgstr ""
+
+#. translators: 1: LabPay refund ID, 2: amount, 3: currency, 4: status.
+#: includes/class-gateway.php:379
+#, php-format
+msgid "LabPay refund %1$s requested: %2$s %3$s (%4$s). Fees are not refunded."
+msgstr ""
+
+#: includes/class-gateway.php:383
+msgid "completed"
+msgstr ""
+
+#: includes/class-gateway.php:383
+msgid "in progress, the final status arrives by notification"
+msgstr ""
+
+#: includes/class-gateway.php:406
+msgid "The live API token cannot be a test key (test_…): paste it in \"Test key\"."
+msgstr ""
+
+#: includes/class-gateway.php:416
+msgid "The test key starts with test_."
+msgstr ""
+
+#: includes/class-gateway.php:426
+msgid "The signing secret looks invalid (whsec_…)."
+msgstr ""
+
+#. translators: %s: order number. Letters (without accents), digits and spaces only: 4 to 22 characters.
+#: includes/class-order-payments.php:354
+#, php-format
+msgid "Order %s"
+msgstr ""
+
+#: includes/class-order-payments.php:368
+msgid "This Mobile Money number is not valid. Check it and try again."
+msgstr ""
+
+#: includes/class-order-payments.php:371
+msgid "This amount is outside the limits of your Mobile Money operator. Choose another payment method or contact the shop."
+msgstr ""
+
+#: includes/class-order-payments.php:374
+msgid "This operator cannot be used for this payment. Choose \"Detect automatically\" or another number."
+msgstr ""
+
+#: includes/class-order-payments.php:377
+msgid "We could not reach the Mobile Money service. Please try again: you will not be charged twice."
+msgstr ""
+
+#: includes/class-order-payments.php:380
+msgid "Mobile Money payment is temporarily unavailable. Please try again in a few minutes."
+msgstr ""
+
+#: includes/class-order-payments.php:383
+msgid "Mobile Money payment is not available for this order. Please choose another payment method or contact the shop."
+msgstr ""
+
+#. translators: 1: LabPay payment ID, 2: amount paid, 3: currency, 4: expected amount, 5: order currency.
+#: includes/class-order-payments.php:441
+#, php-format
+msgid "LabPay payment %1$s completed for %2$s %3$s, but the order expects %4$s %5$s: check it before delivering."
+msgstr ""
+
+#. translators: 1: LabPay refund ID, 2: amount, 3: currency.
+#: includes/class-order-payments.php:518
+#, php-format
+msgid "LabPay refund %1$s completed: %2$s %3$s sent back to the customer."
+msgstr ""
+
+#. translators: 1: LabPay refund ID, 2: failure code.
+#: includes/class-order-payments.php:526
+#, php-format
+msgid "LabPay refund %1$s failed (%2$s): no money was sent and your LabPay balance was credited back. The WooCommerce refund still exists: delete it or refund the customer another way."
+msgstr ""
+
+#. translators: 1: LabPay payment ID, 2: amount, 3: currency.
+#: includes/class-order-payments.php:583
+#, php-format
+msgid "A second LabPay payment %1$s (%2$s %3$s) completed for this already paid order. Refund it from your LabPay dashboard."
+msgstr ""
+
+#. translators: 1: LabPay payment ID, 2: amount, 3: currency, 4: provider code, 5: provider transaction ID, 6: " (test)" or "".
+#: includes/class-order-payments.php:607
+#, php-format
+msgid "LabPay payment %1$s completed: %2$s %3$s via %4$s (operator reference: %5$s)%6$s."
+msgstr ""
+
+#: includes/class-order-payments.php:613
+msgid "(test mode)"
+msgstr ""
+
+#. translators: 1: LabPay payment ID, 2: failure code, 3: failure message.
+#: includes/class-order-payments.php:627
+#, php-format
+msgid "LabPay payment %1$s failed: %2$s %3$s"
+msgstr ""
+
+#. translators: %s: operator name.
+#: includes/class-plugin.php:173
+#: assets/js/blocks.js:62
+#, php-format,js-format
+msgid "Detected operator: %s"
+msgstr ""
+
+#: includes/class-plugin.php:174
+#: assets/js/blocks.js:63
+msgid "This number does not look like a valid Mobile Money number."
+msgstr ""
+
+#: includes/class-plugin.php:189
+msgid "Settings"
+msgstr ""
+
+#: includes/class-plugin.php:201
+msgid "LabPay for WooCommerce needs WooCommerce: install and activate it."
+msgstr ""
+
+#: includes/class-waiting-page.php:60
+#: includes/class-waiting-page.php:87
+msgid "Try again"
+msgstr ""
+
+#: includes/class-waiting-page.php:88
+msgid "Still no confirmation. If you confirmed the payment, it will be taken into account automatically and you will receive an email; otherwise, try again."
+msgstr ""
+
+#: includes/class-waiting-page.php:97
+msgid "Waiting for your confirmation"
+msgstr ""
+
+#. translators: %s: LabPay payment ID.
+#: includes/class-waiting-page.php:103
+#, php-format
+msgid "LabPay reference: %s"
+msgstr ""
+
+#. translators: 1: required PHP version, 2: current PHP version.
+#: labpay-for-woocommerce.php:67
+#, php-format
+msgid "LabPay for WooCommerce needs PHP %1$s or newer (this site runs PHP %2$s). Ask your host to upgrade PHP: the plugin stays inactive until then."
+msgstr ""
+
+#: labpay-for-woocommerce.php:86
+msgid "LabPay for WooCommerce is incomplete (vendor-prefixed/ is missing). Install the plugin from its zip file, or run \"composer install\" in its folder."
+msgstr ""
+
+#: assets/js/blocks.js:13
+msgid "Mobile Money"
+msgstr ""
