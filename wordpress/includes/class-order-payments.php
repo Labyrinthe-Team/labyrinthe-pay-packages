@@ -358,3 +358,363 @@ final class Order_Payments {
 		return strlen( $text ) >= 4 ? $text : null;
 	}
 
+	/**
+	 * Message d'erreur montré au client (jamais le message brut de l'API).
+	 *
+	 * @param \Throwable $error Erreur.
+	 */
+	public static function customer_error( \Throwable $error ): string {
+		if ( $error instanceof InvalidPhoneNumberException || ( $error instanceof InvalidArgumentException && false !== strpos( $error->getMessage(), 'phone' ) ) ) {
+			return __( 'This Mobile Money number is not valid. Check it and try again.', 'labpay-for-woocommerce' );
+		}
+		if ( $error instanceof AmountOutOfRangeException ) {
+			return __( 'This amount is outside the limits of your Mobile Money operator. Choose another payment method or contact the shop.', 'labpay-for-woocommerce' );
+		}
+		if ( $error instanceof ApiException && 'UNSUPPORTED_PROVIDER' === $error->getErrorCode() ) {
+			return __( 'This operator cannot be used for this payment. Choose "Detect automatically" or another number.', 'labpay-for-woocommerce' );
+		}
+		if ( $error instanceof ConnectionException ) {
+			return __( 'We could not reach the Mobile Money service. Please try again: you will not be charged twice.', 'labpay-for-woocommerce' );
+		}
+		if ( $error instanceof ServiceUnavailableException || $error instanceof RateLimitException ) {
+			return __( 'Mobile Money payment is temporarily unavailable. Please try again in a few minutes.', 'labpay-for-woocommerce' );
+		}
+
+		return __( 'Mobile Money payment is not available for this order. Please choose another payment method or contact the shop.', 'labpay-for-woocommerce' );
+	}
+
+	/**
+	 * Code d'erreur à journaliser (jamais de secret : code API ou classe d'exception).
+	 *
+	 * @param \Throwable $error Erreur.
+	 */
+	public static function error_code( \Throwable $error ): string {
+		if ( $error instanceof ApiException ) {
+			return $error->getErrorCode() . ' (HTTP ' . $error->getStatusCode() . ')';
+		}
+		$class = get_class( $error );
+
+		return substr( (string) strrchr( '\\' . $class, '\\' ), 1 );
+	}
+
+	/**
+	 * Remboursements LabPay de la commande : identifiant → statut.
+	 *
+	 * @param \WC_Order $order Commande.
+	 * @return array<string, string>
+	 */
+	public function refunds( \WC_Order $order ): array {
+		$refunds = $order->get_meta( self::META_REFUNDS );
+
+		return is_array( $refunds ) ? array_map( 'strval', $refunds ) : array();
+	}
+
+	/**
+	 * Applique le statut d'un dépôt (sous verrou).
+	 *
+	 * @param \WC_Order $order   Commande relue.
+	 * @param Payment   $payment Dépôt.
+	 * @param string    $source  Origine.
+	 */
+	private function apply_deposit( \WC_Order $order, Payment $payment, string $source ): string {
+		$current = (string) $order->get_meta( self::META_PAYMENT_ID );
+		if ( $payment->id === $current && ! $payment->isPending() ) {
+			$order->update_meta_data( self::META_STATUS, $payment->status->value );
+			$order->save();
+		}
+
+		if ( $payment->isCompleted() ) {
+			if ( $order->is_paid() ) {
+				if ( $order->get_transaction_id() !== $payment->id ) {
+					$this->note_duplicate( $order, $payment );
+				}
+
+				return 'completed';
+			}
+			if ( $order->get_currency() !== $payment->currency || self::amount( $order ) !== $payment->amount ) {
+				if ( (string) $order->get_meta( self::META_MISMATCH ) !== $payment->id ) {
+					$order->update_meta_data( self::META_MISMATCH, $payment->id );
+					$order->update_status(
+						'on-hold',
+						sprintf(
+							/* translators: 1: LabPay payment ID, 2: amount paid, 3: currency, 4: expected amount, 5: order currency. */
+							__( 'LabPay payment %1$s completed for %2$s %3$s, but the order expects %4$s %5$s: check it before delivering.', 'labpay-for-woocommerce' ),
+							$payment->id,
+							$payment->amount,
+							$payment->currency,
+							self::amount( $order ),
+							$order->get_currency()
+						)
+					);
+				}
+
+				return 'on-hold';
+			}
+
+			$order->update_meta_data( self::META_PAYMENT_ID, $payment->id );
+			$order->update_meta_data( self::META_STATUS, 'completed' );
+			$order->save();
+			$order->add_order_note( self::completed_note( $payment ) );
+			$order->payment_complete( $payment->id );
+			$this->logger->log(
+				'info',
+				'Order paid.',
+				array(
+					'order'   => $order->get_id(),
+					'payment' => $payment->id,
+					'source'  => $source,
+				)
+			);
+
+			return 'completed';
+		}
+
+		if ( $payment->isFailed() ) {
+			// Seule la tentative en cours fait échouer la commande (un ancien échec ne change rien).
+			if ( $payment->id !== $current || $order->is_paid() ) {
+				return 'ignored';
+			}
+			if ( ! $order->has_status( 'failed' ) ) {
+				$order->update_status( 'failed', self::failed_note( $payment ) );
+				$this->logger->log(
+					'info',
+					'Payment failed.',
+					array(
+						'order'   => $order->get_id(),
+						'payment' => $payment->id,
+						'failure' => null !== $payment->failure ? $payment->failure->code : null,
+						'source'  => $source,
+					)
+				);
+			}
+
+			return 'failed';
+		}
+
+		return 'pending';
+	}
+
+	/**
+	 * Applique le statut final d'un remboursement (sous verrou).
+	 *
+	 * @param \WC_Order $order   Commande relue.
+	 * @param Payment   $payment Remboursement.
+	 */
+	private function apply_refund( \WC_Order $order, Payment $payment ): string {
+		$refunds = $this->refunds( $order );
+		if ( ! isset( $refunds[ $payment->id ] ) ) {
+			return 'ignored';
+		}
+		if ( $refunds[ $payment->id ] === $payment->status->value || $payment->isPending() ) {
+			return $payment->status->value;
+		}
+
+		$refunds[ $payment->id ] = $payment->status->value;
+		$order->update_meta_data( self::META_REFUNDS, $refunds );
+		$order->save();
+
+		if ( $payment->isCompleted() ) {
+			/* translators: 1: LabPay refund ID, 2: amount, 3: currency. */
+			$order->add_order_note( sprintf( __( 'LabPay refund %1$s completed: %2$s %3$s sent back to the customer.', 'labpay-for-woocommerce' ), $payment->id, $payment->amount, $payment->currency ) );
+
+			return 'completed';
+		}
+
+		$order->add_order_note(
+			sprintf(
+				/* translators: 1: LabPay refund ID, 2: failure code. */
+				__( 'LabPay refund %1$s failed (%2$s): no money was sent and your LabPay balance was credited back. The WooCommerce refund still exists: delete it or refund the customer another way.', 'labpay-for-woocommerce' ),
+				$payment->id,
+				null !== $payment->failure ? $payment->failure->code : 'FAILED'
+			)
+		);
+
+		return 'failed';
+	}
+
+	/**
+	 * Mémorise un dépôt créé (identifiant courant et historique des tentatives).
+	 *
+	 * @param \WC_Order $order   Commande.
+	 * @param Payment   $payment Dépôt.
+	 */
+	private function remember( \WC_Order $order, Payment $payment ): void {
+		$ids = $order->get_meta( self::META_PAYMENT_IDS );
+		$ids = is_array( $ids ) ? array_values( array_map( 'strval', $ids ) ) : array();
+		if ( ! in_array( $payment->id, $ids, true ) ) {
+			$ids[] = $payment->id;
+		}
+		$order->update_meta_data( self::META_PAYMENT_IDS, $ids );
+		$order->update_meta_data( self::META_PAYMENT_ID, $payment->id );
+		$order->update_meta_data( self::META_STATUS, $payment->status->value );
+		$order->save();
+	}
+
+	/**
+	 * Vrai si le dépôt appartient à la commande (une de ses tentatives).
+	 *
+	 * @param \WC_Order $order      Commande.
+	 * @param string    $payment_id Identifiant.
+	 */
+	private function knows( \WC_Order $order, string $payment_id ): bool {
+		$ids = $order->get_meta( self::META_PAYMENT_IDS );
+
+		return is_array( $ids ) && in_array( $payment_id, array_map( 'strval', $ids ), true );
+	}
+
+	/**
+	 * Note (une seule fois) : un second paiement réussi pour une commande déjà payée.
+	 *
+	 * @param \WC_Order $order   Commande.
+	 * @param Payment   $payment Paiement en trop.
+	 */
+	private function note_duplicate( \WC_Order $order, Payment $payment ): void {
+		$noted = $order->get_meta( self::META_DUPLICATES );
+		$noted = is_array( $noted ) ? $noted : array();
+		if ( in_array( $payment->id, $noted, true ) ) {
+			return;
+		}
+		$noted[] = $payment->id;
+		$order->update_meta_data( self::META_DUPLICATES, $noted );
+		$order->save();
+		$order->add_order_note(
+			sprintf(
+				/* translators: 1: LabPay payment ID, 2: amount, 3: currency. */
+				__( 'A second LabPay payment %1$s (%2$s %3$s) completed for this already paid order. Refund it from your LabPay dashboard.', 'labpay-for-woocommerce' ),
+				$payment->id,
+				$payment->amount,
+				$payment->currency
+			)
+		);
+		$this->logger->log(
+			'warning',
+			'Second completed payment for a paid order.',
+			array(
+				'order'   => $order->get_id(),
+				'payment' => $payment->id,
+			)
+		);
+	}
+
+	/**
+	 * Note de paiement réussi.
+	 *
+	 * @param Payment $payment Dépôt.
+	 */
+	private static function completed_note( Payment $payment ): string {
+		return sprintf(
+			/* translators: 1: LabPay payment ID, 2: amount, 3: currency, 4: provider code, 5: provider transaction ID, 6: " (test)" or "". */
+			__( 'LabPay payment %1$s completed: %2$s %3$s via %4$s (operator reference: %5$s)%6$s.', 'labpay-for-woocommerce' ),
+			$payment->id,
+			$payment->amount,
+			$payment->currency,
+			(string) $payment->provider,
+			$payment->providerTransactionId ?? '—', // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- propriété du SDK.
+			$payment->isTest() ? ' ' . __( '(test mode)', 'labpay-for-woocommerce' ) : ''
+		);
+	}
+
+	/**
+	 * Note de paiement échoué.
+	 *
+	 * @param Payment $payment Dépôt.
+	 */
+	private static function failed_note( Payment $payment ): string {
+		$failure = $payment->failure;
+
+		return sprintf(
+			/* translators: 1: LabPay payment ID, 2: failure code, 3: failure message. */
+			__( 'LabPay payment %1$s failed: %2$s %3$s', 'labpay-for-woocommerce' ),
+			$payment->id,
+			null !== $failure ? $failure->code : 'FAILED',
+			null !== $failure && null !== $failure->message ? '(' . wp_strip_all_tags( $failure->message ) . ')' : ''
+		);
+	}
+
+	/**
+	 * Adresse de notification : la route REST du plugin, seulement en HTTPS (LabPay refuse les
+	 * adresses non publiques). Sans elle, la page d'attente et la synchronisation suffisent.
+	 */
+	private function callback_url(): ?string {
+		$url = rest_url( 'labpay/v1/webhook' );
+		$url = 0 === strpos( $url, 'https://' ) ? $url : null;
+
+		/**
+		 * Adresse envoyée comme callback_url (null : aucune notification).
+		 *
+		 * @param string|null $url URL publique HTTPS.
+		 */
+		$url = apply_filters( 'labpay_wc_callback_url', $url );
+
+		return is_string( $url ) && '' !== $url ? $url : null;
+	}
+
+	/**
+	 * Référence d'une tentative de paiement.
+	 *
+	 * @param \WC_Order $order   Commande.
+	 * @param int       $attempt Numéro de tentative.
+	 */
+	private function reference( \WC_Order $order, int $attempt ): string {
+		$reference = sprintf( '%s-%d-%d', $this->settings->reference_prefix(), $order->get_id(), $attempt );
+
+		/**
+		 * Référence LabPay d'une tentative de paiement (unique par token et par mode, 100 caractères au plus :
+		 * lettres, chiffres, . _ : -). Gardez « <préfixe>-<id de commande>- » au début pour que le webhook
+		 * retrouve la commande.
+		 *
+		 * @param string    $reference Référence.
+		 * @param \WC_Order $order     Commande.
+		 * @param int       $attempt   Tentative.
+		 */
+		$filtered = apply_filters( 'labpay_wc_reference', $reference, $order, $attempt );
+
+		return is_string( $filtered ) && 1 === preg_match( '/^[A-Za-z0-9._:\-]{1,100}$/', $filtered ) ? $filtered : $reference;
+	}
+
+	/**
+	 * Commande relue en base (état à jour sous le verrou).
+	 *
+	 * @param \WC_Order $order Commande.
+	 */
+	private function fresh( \WC_Order $order ): \WC_Order {
+		$fresh = wc_get_order( $order->get_id() );
+
+		return $fresh instanceof \WC_Order ? $fresh : $order;
+	}
+
+	/**
+	 * Exécute $callback sous un verrou propre à la commande (ligne d'option insérée atomiquement).
+	 *
+	 * @template T
+	 * @param int           $order_id Commande.
+	 * @param callable(): T $callback Traitement.
+	 * @return T
+	 * @throws Lock_Exception Verrou déjà pris (et récent).
+	 */
+	private function with_lock( int $order_id, callable $callback ) {
+		global $wpdb;
+
+		$name = 'labpay_wc_lock_' . $order_id;
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verrou : jamais mis en cache.
+		$acquired = 1 === (int) $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'no')", $name, (string) time() ) );
+		if ( ! $acquired ) {
+			$since = (int) $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $name ) );
+			if ( $since < time() - 60 ) {
+				// Verrou abandonné (processus interrompu) : repris.
+				$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s", (string) time(), $name ) );
+				$acquired = true;
+			}
+		}
+		// phpcs:enable
+		if ( ! $acquired ) {
+			throw new Lock_Exception( 'Order is locked.' );
+		}
+
+		try {
+			return $callback();
+		} finally {
+			$wpdb->delete( $wpdb->options, array( 'option_name' => $name ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verrou.
+		}
+	}
+}
