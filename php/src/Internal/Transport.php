@@ -153,3 +153,157 @@ final class Transport
             }
 
             $this->logger->info('LabPay API error', [
+                'method' => $method, 'path' => $logPath, 'status' => $status, 'code' => $error->getErrorCode(),
+            ]);
+
+            throw $error;
+        }
+    }
+
+    /** Metadata of the last response received (success or error), null before the first one. */
+    public function lastResponse(): ?ResponseInfo
+    {
+        return $this->lastResponse;
+    }
+
+    /**
+     * Seconds to wait before the next attempt, or null when the error must be thrown.
+     */
+    private function retryDelay(RetryMode $mode, ApiException $error, int $attempt): ?float
+    {
+        $retryAfter = self::retryAfter($error);
+
+        // Refused before processing: only when the API schedules the re-enable.
+        if (\in_array($error->getErrorCode(), self::REFUSED_BEFORE_PROCESSING, true)) {
+            return $retryAfter !== null && $retryAfter <= $this->maxRetryWait ? $retryAfter : null;
+        }
+
+        // Only the rate limiter: DAILY_LIMIT_REACHED is a business limit.
+        if ($error->getStatusCode() === 429) {
+            if ($error->getErrorCode() !== ErrorFactory::RATE_LIMITED) {
+                return null;
+            }
+            if ($retryAfter !== null) {
+                return $retryAfter <= $this->maxRetryWait ? $retryAfter : null;
+            }
+
+            return $this->backoff($attempt);
+        }
+
+        return $mode === RetryMode::Safe && $error->getStatusCode() >= 500 ? $this->backoff($attempt) : null;
+    }
+
+    /** Exponential backoff with jitter: 0.5 s, 1 s, 2 s… (50 to 100 % of it), capped. */
+    private function backoff(int $attempt): float
+    {
+        $delay = min(self::MAX_BACKOFF, self::BASE_DELAY * (2 ** $attempt));
+        $jitter = 0.5 + (mt_rand() / mt_getrandmax()) * 0.5;
+
+        return min($this->maxRetryWait, $delay * $jitter);
+    }
+
+    /** Seconds from the Retry-After header (delta-seconds or HTTP date), null when absent or unreadable. */
+    private static function retryAfter(ApiException $error): ?float
+    {
+        $header = $error->getHeader('retry-after');
+        if ($header === null) {
+            return null;
+        }
+        $header = trim($header);
+        if (preg_match('/^\d+(\.\d+)?$/', $header) === 1) {
+            return (float) $header;
+        }
+        $date = strtotime($header);
+
+        return $date !== false ? (float) max(0, $date - time()) : null;
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private static function decode(string $rawBody): array
+    {
+        if (trim($rawBody) === '') {
+            return [];
+        }
+
+        try {
+            $decoded = json_decode($rawBody, true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new UnexpectedValueException('Unexpected API response: the body is not valid JSON.');
+        }
+
+        if (!\is_array($decoded)) {
+            throw new UnexpectedValueException('Unexpected API response: a JSON object was expected.');
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private static function tryDecode(string $rawBody): array
+    {
+        try {
+            $decoded = json_decode($rawBody, true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return [];
+        }
+
+        return \is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function headers(ResponseInterface $response): array
+    {
+        $headers = [];
+        foreach (array_keys($response->getHeaders()) as $name) {
+            $headers[strtolower((string) $name)] = $response->getHeaderLine((string) $name);
+        }
+
+        return $headers;
+    }
+
+    private static function isTimeout(ClientExceptionInterface $e): bool
+    {
+        $message = strtolower($e->getMessage());
+
+        return str_contains($message, 'timed out') || str_contains($message, 'curl error 28') || str_contains($message, 'timeout');
+    }
+
+    private function connectionMessage(string $method, string $path, RetryMode $mode, ClientExceptionInterface $e): string
+    {
+        // The underlying message may contain the full URL: drop its query string (references, numbers).
+        $reason = (string) preg_replace('/\?[^\s"\']*/', '?…', $e->getMessage());
+        $message = \sprintf('Could not reach the LabPay API (%s %s): %s', $method, $path, $reason);
+
+        if ($mode === RetryMode::OnlyWhenThrottled) {
+            $message .= ' The request may have been processed; it was not retried automatically.';
+        }
+
+        return $message;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'apiKey' => Redactor::apiKey($this->apiKey),
+            'baseUrl' => $this->baseUrl,
+            'maxRetries' => $this->maxRetries,
+        ];
+    }
+
+    /**
+     * @return never
+     */
+    public function __serialize(): array
+    {
+        throw new \LogicException('The LabPay transport cannot be serialized (it holds the API key).');
+    }
+}
