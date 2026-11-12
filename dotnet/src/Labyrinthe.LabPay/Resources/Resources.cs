@@ -234,3 +234,239 @@ public sealed class PaymentsResource : ResourceBase
                     Currency = filters.Currency,
                     Country = filters.Country,
                     Reference = filters.Reference,
+                    From = filters.From,
+                    To = filters.To,
+                    PerPage = filters.PerPage ?? Input.MaxPerPage,
+                    Page = current,
+                },
+                cancellationToken).ConfigureAwait(false);
+            foreach (var payment in result.Data)
+            {
+                yield return payment;
+            }
+
+            page = result.HasMore ? result.CurrentPage + 1 : null;
+        }
+    }
+
+    /// <summary>The payment carrying your reference, or <see langword="null"/> (references are unique per token and
+    /// mode).</summary>
+    /// <param name="reference">Your reference.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The payment, or <see langword="null"/>.</returns>
+    public async Task<Payment?> FindByReferenceAsync(string reference, CancellationToken cancellationToken = default)
+    {
+        var checkedReference = Input.ReferenceOrNull(reference) ?? throw new InvalidArgumentException("reference is required.");
+        var page = await ListAsync(new ListPaymentsRequest { Reference = checkedReference, PerPage = 1 }, cancellationToken).ConfigureAwait(false);
+        return page.Data.Count > 0 ? page.Data[0] : null;
+    }
+}
+
+/// <summary>Countries, providers, availability and prediction (<c>client.Providers</c>).</summary>
+public sealed class ProvidersResource : ResourceBase
+{
+    internal ProvidersResource(Transport transport, bool autoReference)
+        : base(transport, autoReference)
+    {
+    }
+
+    /// <summary>Countries open to payments: dial code, currencies, limits per currency.</summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The countries.</returns>
+    public async Task<IReadOnlyList<Country>> CountriesAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await Transport.SendAsync(HttpMethod.Get, "/countries", RetryMode.Safe, null, null, false, cancellationToken).ConfigureAwait(false);
+        return Mapping.ToList(response.Data, Mapping.ToCountry);
+    }
+
+    /// <summary>Providers and their rules for an operation.</summary>
+    /// <param name="operation">Deposit (API default when <see langword="null"/>), payout or refund.</param>
+    /// <param name="country">ISO alpha-3 country, or <see langword="null"/> for every country.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The providers.</returns>
+    public async Task<IReadOnlyList<Provider>> ListAsync(Operation? operation = null, string? country = null, CancellationToken cancellationToken = default)
+    {
+        var query = new List<KeyValuePair<string, string>>();
+        if (operation is { } op)
+        {
+            query.Add(new KeyValuePair<string, string>("operation", ApiValues.Filter(op.ToApiString(), "operation")));
+        }
+
+        if (Input.Country(country) is { } code)
+        {
+            query.Add(new KeyValuePair<string, string>("country", code));
+        }
+
+        var response = await Transport.SendAsync(HttpMethod.Get, "/providers", RetryMode.Safe, query, null, false, cancellationToken).ConfigureAwait(false);
+        return Mapping.ToList(response.Data, Mapping.ToProvider);
+    }
+
+    /// <summary>Real-time availability per provider code: <c>OPERATIONAL</c>, <c>DELAYED</c> (payouts queued) or
+    /// <c>CLOSED</c>.</summary>
+    /// <param name="country">ISO alpha-3 country, or <see langword="null"/> for every country.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>Availability per provider code.</returns>
+    public async Task<IReadOnlyDictionary<string, ProviderAvailability>> AvailabilityAsync(string? country = null, CancellationToken cancellationToken = default)
+    {
+        var query = new List<KeyValuePair<string, string>>();
+        if (Input.Country(country) is { } code)
+        {
+            query.Add(new KeyValuePair<string, string>("country", code));
+        }
+
+        var response = await Transport.SendAsync(HttpMethod.Get, "/availability", RetryMode.Safe, query, null, false, cancellationToken).ConfigureAwait(false);
+        var result = new Dictionary<string, ProviderAvailability>(StringComparer.Ordinal);
+        var data = response.Data.ValueKind == System.Text.Json.JsonValueKind.Undefined || response.Data.ValueKind == System.Text.Json.JsonValueKind.Null
+            ? Json.Lenient(response.Data)
+            : Json.Api.Object(response.Data, "data");
+        foreach (var entry in data.EnumerateObject())
+        {
+            result[entry.Name] = Mapping.ToAvailability(entry.Name, entry.Value);
+        }
+
+        return result;
+    }
+
+    /// <summary>Validates a number and predicts its provider, without creating a payment.</summary>
+    /// <param name="phone">Local or international number.</param>
+    /// <param name="country">ISO alpha-3 country, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The prediction.</returns>
+    /// <exception cref="InvalidPhoneNumberException">The number is not valid.</exception>
+    public async Task<ProviderPrediction> PredictAsync(string phone, string? country = null, CancellationToken cancellationToken = default)
+    {
+        var fields = new List<KeyValuePair<string, object?>>
+        {
+            new("phone", Input.Phone(phone)),
+            new("country", Input.Country(country)),
+        };
+        var response = await Transport.SendAsync(HttpMethod.Post, "/predict-provider", RetryMode.Safe, null, Json.Write(fields), false, cancellationToken).ConfigureAwait(false);
+        return Mapping.ToPrediction(response.Data);
+    }
+}
+
+/// <summary>The merchant account, keys and balances (<c>client.Account</c>).</summary>
+public sealed class AccountResource : ResourceBase
+{
+    internal AccountResource(Transport transport, bool autoReference)
+        : base(transport, autoReference)
+    {
+    }
+
+    /// <summary>Mode, fee rates, test key and (live token only) the signing secret.</summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The account.</returns>
+    public async Task<Account> GetAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await Transport.SendAsync(HttpMethod.Get, "/account", RetryMode.Safe, null, null, false, cancellationToken).ConfigureAwait(false);
+        return Mapping.ToAccount(response.Data);
+    }
+
+    /// <summary>One balance per currency, in the mode of the key.</summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The balances.</returns>
+    public async Task<IReadOnlyList<Balance>> BalancesAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await Transport.SendAsync(HttpMethod.Get, "/balances", RetryMode.Safe, null, null, false, cancellationToken).ConfigureAwait(false);
+        return Mapping.ToList(response.Data, Mapping.ToBalance);
+    }
+
+    /// <summary>The balance of one currency, <see langword="null"/> when the account has none.</summary>
+    /// <param name="currency">E.g. <c>CDF</c> (any case).</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The balance, or <see langword="null"/>.</returns>
+    public async Task<Balance?> BalanceAsync(string currency, CancellationToken cancellationToken = default)
+    {
+        var code = (currency ?? string.Empty).Trim();
+        foreach (var balance in await BalancesAsync(cancellationToken).ConfigureAwait(false))
+        {
+            if (string.Equals(balance.Currency, code, StringComparison.OrdinalIgnoreCase))
+            {
+                return balance;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>New signing secret; the previous one stays accepted 24 h. Live token only, never retried after a
+    /// network error or a 5xx.</summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The new secret.</returns>
+    public async Task<WebhookSecret> RotateWebhookSecretAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await Transport.SendAsync(HttpMethod.Post, "/account/webhook-secret/rotate", RetryMode.ThrottledOnly, null, null, false, cancellationToken).ConfigureAwait(false);
+        return Mapping.ToWebhookSecret(response.Data);
+    }
+
+    /// <summary>New test key, returned; the previous one stops working immediately. Live token only, never retried
+    /// after a network error or a 5xx.</summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The new test key (<c>test_…</c>).</returns>
+    public async Task<string> RotateTestKeyAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await Transport.SendAsync(HttpMethod.Post, "/account/test-key/rotate", RetryMode.ThrottledOnly, null, null, false, cancellationToken).ConfigureAwait(false);
+        var data = Json.Api.Object(response.Data, "data");
+        return Json.Field(data, "test_key") is { ValueKind: System.Text.Json.JsonValueKind.String } key && key.GetString() is { } value
+            ? value
+            : throw Json.Api.Invalid("test_key", "a string");
+    }
+}
+
+/// <summary>History of the notifications sent to your <c>callback_url</c> (<c>client.Notifications</c>).</summary>
+public sealed class NotificationsResource : ResourceBase
+{
+    internal NotificationsResource(Transport transport, bool autoReference)
+        : base(transport, autoReference)
+    {
+    }
+
+    /// <summary>Notifications of the token's payments (mode of the key), newest first.</summary>
+    /// <param name="request">Filters and page.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>One page.</returns>
+    public async Task<Page<Notification>> ListAsync(ListNotificationsRequest? request = null, CancellationToken cancellationToken = default)
+    {
+        var filters = request ?? new ListNotificationsRequest();
+        var query = new List<KeyValuePair<string, string>>();
+        if (filters.PaymentId is not null)
+        {
+            query.Add(new KeyValuePair<string, string>("payment_id", Input.Id(filters.PaymentId, "paymentId")));
+        }
+
+        if (filters.Status is { } status)
+        {
+            query.Add(new KeyValuePair<string, string>("status", ApiValues.Filter(status.ToApiString(), "Status")));
+        }
+
+        if (Input.PerPage(filters.PerPage) is { } perPage)
+        {
+            query.Add(new KeyValuePair<string, string>("per_page", perPage.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (Input.Page(filters.Page) is { } page)
+        {
+            query.Add(new KeyValuePair<string, string>("page", page.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        var response = await Transport.SendAsync(HttpMethod.Get, "/notifications", RetryMode.Safe, query, null, false, cancellationToken).ConfigureAwait(false);
+        return Mapping.ToPage(response.Body, Mapping.ToNotification);
+    }
+
+    /// <summary>Resends a notification (a new one is created and delivered). Never retried automatically after a
+    /// network error or a 5xx.</summary>
+    /// <param name="id">Notification id.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The new notification.</returns>
+    public async Task<Notification> ResendAsync(long id, CancellationToken cancellationToken = default)
+    {
+        if (id < 1)
+        {
+            throw new InvalidArgumentException("id must be a positive integer.");
+        }
+
+        var path = "/notifications/" + id.ToString(CultureInfo.InvariantCulture) + "/resend";
+        var response = await Transport.SendAsync(HttpMethod.Post, path, RetryMode.ThrottledOnly, null, null, false, cancellationToken).ConfigureAwait(false);
+        return Mapping.ToNotification(response.Data);
+    }
+}
