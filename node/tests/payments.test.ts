@@ -71,3 +71,76 @@ describe('deposits, payouts, refunds', () => {
     const result = await labpay.deposits.create({ amount: '1000', currency: 'CDF', phone: '243813456019' });
 
     expect(result.status).toBe('failed');
+    expect(result.failure).toEqual({ code: 'PAYER_LIMIT_REACHED', message: 'Limite' });
+    expect(labpay.lastResponse?.status).toBe(422);
+  });
+
+  it('creates a refund', async () => {
+    const http = mockFetch(json(201, { data: payment({ id: 'RFD-1', operation: 'refund', refunded_payment_id: 'DEP-1' }) }));
+    const { labpay } = client(http.fetch);
+
+    const refund = await labpay.refunds.create({ paymentId: 'DEP-1', amount: '300', reference: 'REFUND-42-1' });
+
+    expect(http.last().body).toEqual({ payment_id: 'DEP-1', amount: '300', reference: 'REFUND-42-1' });
+    expect(refund.refundedPaymentId).toBe('DEP-1');
+  });
+
+  it('gets, syncs and cancels', async () => {
+    const http = mockFetch(
+      json(200, { data: payment({ id: 'PAY-1', operation: 'payout', gateway_status: 'ENQUEUED' }) }),
+      json(200, { data: payment({ id: 'PAY-1', operation: 'payout' }) }),
+      json(200, { data: payment({ status: 'completed', completed_at: '2026-11-11T10:00:42+00:00' }) }),
+    );
+    const { labpay } = client(http.fetch);
+
+    expect(isQueued(await labpay.payments.get('PAY-1'))).toBe(true);
+    expect(http.last().url).toBe('https://api.example.test/api/V2/payments/PAY-1');
+    await labpay.payouts.cancel('PAY-1');
+    expect(http.last().url).toBe('https://api.example.test/api/V2/payouts/PAY-1/cancel');
+    const synced = await labpay.payments.sync('DEP-1');
+    expect(http.last()).toMatchObject({ method: 'POST', url: 'https://api.example.test/api/V2/payments/DEP-1/sync' });
+    expect(synced.completedAt).toBe('2026-11-11T10:00:42+00:00');
+  });
+
+  it('lists and iterates over pages', async () => {
+    const meta = { current_page: 1, last_page: 2, per_page: 1, total: 2 };
+    const http = mockFetch(
+      json(200, { data: [payment()], links: {}, meta }),
+      json(200, { data: [payment({ id: 'DEP-2' })], links: {}, meta: { ...meta, current_page: 2 } }),
+    );
+    const { labpay } = client(http.fetch);
+
+    const ids: string[] = [];
+    for await (const p of labpay.payments.iterate({ status: 'completed', operation: 'deposit', from: new Date('2026-11-01T00:00:00Z'), perPage: 1 })) {
+      ids.push(p.id);
+    }
+
+    expect(ids).toEqual(['DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6', 'DEP-2']);
+    expect(new URL(http.last().url).search).toBe('?status=completed&operation=deposit&from=2026-11-01&per_page=1&page=2');
+  });
+
+  it('finds by reference', async () => {
+    const http = mockFetch(json(200, { data: [], meta: { current_page: 1, last_page: 1, per_page: 1, total: 0 } }));
+    const { labpay } = client(http.fetch);
+
+    expect(await labpay.payments.findByReference('ORDER-404')).toBeNull();
+    expect(new URL(http.last().url).search).toBe('?reference=ORDER-404&per_page=1');
+  });
+
+  it.each([
+    ['zero amount', (l: LabPay) => l.deposits.create({ amount: '0', currency: 'CDF', phone: '0813456789' })],
+    ['three decimals', (l: LabPay) => l.deposits.create({ amount: 1.234, currency: 'CDF', phone: '0813456789' })],
+    ['bad currency', (l: LabPay) => l.deposits.create({ amount: '10', currency: 'FC', phone: '0813456789' })],
+    ['bad reference', (l: LabPay) => l.deposits.create({ amount: '10', currency: 'CDF', phone: '0813456789', reference: 'order 42' })],
+    ['http callback', (l: LabPay) => l.deposits.create({ amount: '10', currency: 'CDF', phone: '0813456789', callbackUrl: 'http://example.test' })],
+    ['short message', (l: LabPay) => l.deposits.create({ amount: '10', currency: 'CDF', phone: '0813456789', customerMessage: 'Hi' })],
+    ['per page', (l: LabPay) => l.payments.list({ perPage: 101 })],
+    ['date', (l: LabPay) => l.payments.list({ from: '01/11/2026' })],
+  ])('rejects %s before any request', async (_name, call) => {
+    const http = mockFetch();
+    const { labpay } = client(http.fetch);
+
+    await expect(call(labpay)).rejects.toBeInstanceOf(InvalidArgumentError);
+    expect(http.requests).toHaveLength(0);
+  });
+});
