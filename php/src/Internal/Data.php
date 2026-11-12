@@ -114,3 +114,119 @@ final class Data
         $value = $data[$key] ?? null;
         if (\is_array($value)) {
             return $value;
+        }
+
+        throw self::invalid($key, 'object or array');
+    }
+
+    /**
+     * Missing or null gives an empty array.
+     *
+     * @param array<mixed> $data
+     *
+     * @return array<mixed>
+     */
+    public static function optionalArray(array $data, string $key): array
+    {
+        $value = $data[$key] ?? null;
+        if ($value === null) {
+            return [];
+        }
+        if (\is_array($value)) {
+            return $value;
+        }
+
+        throw self::invalid($key, 'object or array');
+    }
+
+    /**
+     * @param array<mixed> $data
+     *
+     * @return array<mixed>|null
+     */
+    public static function nullableArray(array $data, string $key): ?array
+    {
+        $value = $data[$key] ?? null;
+        if ($value === null) {
+            return null;
+        }
+        if (\is_array($value)) {
+            return $value;
+        }
+
+        throw self::invalid($key, 'object or array');
+    }
+
+    /**
+     * @param array<mixed> $data
+     *
+     * @return list<string>
+     */
+    public static function stringList(array $data, string $key): array
+    {
+        $list = [];
+        foreach (self::optionalArray($data, $key) as $value) {
+            if (\is_string($value)) {
+                $list[] = $value;
+            }
+        }
+
+        return $list;
+    }
+
+    /**
+     * Object of string (or null) values, e.g. payment metadata.
+     *
+     * @param array<mixed> $data
+     *
+     * @return array<string, string|null>|null
+     */
+    public static function nullableStringMap(array $data, string $key): ?array
+    {
+        $value = self::nullableArray($data, $key);
+        if ($value === null) {
+            return null;
+        }
+
+        $map = [];
+        foreach ($value as $name => $item) {
+            $map[(string) $name] = \is_scalar($item) ? (string) $item : null;
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param array<mixed> $data
+     */
+    public static function nullableDateTime(array $data, string $key): ?\DateTimeImmutable
+    {
+        $value = self::nullableString($data, $key);
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return new \DateTimeImmutable($value);
+        } catch (\Exception) {
+            throw self::invalid($key, 'ISO 8601 date');
+        }
+    }
+
+    /**
+     * The `data` member of a response body.
+     *
+     * @param array<mixed> $body
+     *
+     * @return array<mixed>
+     */
+    public static function data(array $body): array
+    {
+        return self::array($body, 'data');
+    }
+
+    private static function invalid(string $key, string $expected): UnexpectedValueException
+    {
+        return new UnexpectedValueException(\sprintf('Unexpected API payload: "%s" should be a %s.', $key, $expected));
+    }
+}
