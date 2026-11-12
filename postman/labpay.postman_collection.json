@@ -2667,3 +2667,2671 @@
                 ],
                 "method": "GET",
                 "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "failed"
+                    },
+                    {
+                      "key": "operation",
+                      "value": "payout"
+                    },
+                    {
+                      "key": "currency",
+                      "value": "Mim"
+                    },
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    },
+                    {
+                      "key": "reference",
+                      "value": "string"
+                    },
+                    {
+                      "key": "from",
+                      "value": "1961-01-10"
+                    },
+                    {
+                      "key": "to",
+                      "value": "1961-01-10"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "page",
+                      "value": "467"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/payments?status=failed&operation=payout&currency=Mim&country=Mim&reference=string&from=1961-01-10&to=1961-01-10&per_page=20&page=467",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Paramètres invalides.\",\n  \"code\": \"VALIDATION_ERROR\",\n  \"errors\": {\n    \"phone\": [\n      \"Le numéro de téléphone est invalide.\"\n    ]\n  }\n}",
+              "code": 422,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "80f5eda6-4c42-4f31-a970-43e7894dea01",
+              "name": "Invalid parameters. On `GET /providers`, `/availability` and `/notifications` the body has no `code`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "failed"
+                    },
+                    {
+                      "key": "operation",
+                      "value": "payout"
+                    },
+                    {
+                      "key": "currency",
+                      "value": "Mim"
+                    },
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    },
+                    {
+                      "key": "reference",
+                      "value": "string"
+                    },
+                    {
+                      "key": "from",
+                      "value": "1961-01-10"
+                    },
+                    {
+                      "key": "to",
+                      "value": "1961-01-10"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "page",
+                      "value": "467"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/payments?status=failed&operation=payout&currency=Mim&country=Mim&reference=string&from=1961-01-10&to=1961-01-10&per_page=20&page=467",
+                  "variable": []
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "c1c425bc-7fb7-40f1-a4f0-27778497b145",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "failed"
+                    },
+                    {
+                      "key": "operation",
+                      "value": "payout"
+                    },
+                    {
+                      "key": "currency",
+                      "value": "Mim"
+                    },
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    },
+                    {
+                      "key": "reference",
+                      "value": "string"
+                    },
+                    {
+                      "key": "from",
+                      "value": "1961-01-10"
+                    },
+                    {
+                      "key": "to",
+                      "value": "1961-01-10"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "page",
+                      "value": "467"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/payments?status=failed&operation=payout&currency=Mim&country=Mim&reference=string&from=1961-01-10&to=1961-01-10&per_page=20&page=467",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Nouvelle référence à chaque exécution (clé d'idempotence : la renvoyer rend le même paiement).",
+                  "pm.collectionVariables.set('reference', 'POSTMAN-RFD-' + Date.now());"
+                ],
+                "id": "17f6c68a-8da1-4ec5-a0b3-f77ec7250455",
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 201, 202, 401, 403, 404, 409, 422, 429, 503)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,202,401,403,404,409,422,429,503]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}"
+                ],
+                "id": "3e3e0a9e-e095-464b-adb7-2f4d0d5a7510",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "6285eebe-7707-41cd-a654-50f73e0e6a0a",
+          "name": "POST /refunds — Refund a deposit",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"payment_id\": \"{{paymentId}}\",\n  \"amount\": \"100\",\n  \"reference\": \"{{reference}}\"\n}"
+            },
+            "description": {
+              "content": "All or part of a completed V2 deposit of this token. The refundable amount is the net amount credited to the\nmerchant (fees are not refunded). One refund in progress at a time per deposit. No fee on a refund.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "name": "Refund a deposit",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "refunds"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/refunds",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"RFD-01JCXA2C3D4E5F6G7H8J9K0L1M\",\n    \"reference\": \"REFUND-42-1\",\n    \"operation\": \"refund\",\n    \"livemode\": false,\n    \"status\": \"completed\",\n    \"gateway_status\": \"ACCEPTED\",\n    \"amount\": \"300.00\",\n    \"fee\": \"0.00\",\n    \"total_amount\": \"300.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": \"MP2611110001\",\n    \"failure\": null,\n    \"metadata\": null,\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": \"2026-11-11T10:00:42+00:00\",\n    \"refunded_payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\"\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "cb9b67af-0fe2-4083-ac6a-fc555a0ccbba",
+              "name": "The `reference` was already used by a completed payment, which is returned.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n  \"amount\": \"300\",\n  \"reference\": \"REFUND-42-1\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "refunds"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/refunds",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"RFD-01JCXA2C3D4E5F6G7H8J9K0L1M\",\n    \"reference\": \"REFUND-42-1\",\n    \"operation\": \"refund\",\n    \"livemode\": false,\n    \"status\": \"pending\",\n    \"gateway_status\": \"ACCEPTED\",\n    \"amount\": \"300.00\",\n    \"fee\": \"0.00\",\n    \"total_amount\": \"300.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": null,\n    \"failure\": null,\n    \"metadata\": null,\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": null,\n    \"refunded_payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\"\n  }\n}",
+              "code": 201,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Mode of the key used.",
+                  "disabled": false,
+                  "key": "X-Labyrinthe-Mode",
+                  "value": "test"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "f70c095e-8352-4653-ade7-24cffbda579d",
+              "name": "Accepted, awaiting the final status (or resend of a pending `reference`).",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n  \"amount\": \"300\",\n  \"reference\": \"REFUND-42-1\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "refunds"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/refunds",
+                  "variable": []
+                }
+              },
+              "status": "Created"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"RFD-01JCXA2C3D4E5F6G7H8J9K0L1M\",\n    \"reference\": \"REFUND-42-1\",\n    \"operation\": \"refund\",\n    \"livemode\": false,\n    \"status\": \"pending\",\n    \"gateway_status\": \"UNKNOWN\",\n    \"amount\": \"300.00\",\n    \"fee\": \"0.00\",\n    \"total_amount\": \"300.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": null,\n    \"failure\": null,\n    \"metadata\": null,\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": null,\n    \"refunded_payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\"\n  }\n}",
+              "code": 202,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "473f5592-51a1-4d52-a6fa-8a2c86044b03",
+              "name": "Unknown aggregator answer (`gateway_status: UNKNOWN`). The payment stays `pending` and its status is re-read automatically. Not a failure.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n  \"amount\": \"300\",\n  \"reference\": \"REFUND-42-1\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "refunds"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/refunds",
+                  "variable": []
+                }
+              },
+              "status": "Accepted"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "a04dd50a-24e3-49ef-ab86-9baea5ebe481",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n  \"amount\": \"300\",\n  \"reference\": \"REFUND-42-1\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "refunds"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/refunds",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Vérification du compte (KYC) requise pour les paiements en production.\",\n  \"code\": \"KYC_REQUIRED\"\n}",
+              "code": 403,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "5205ecaa-4a6b-4787-a695-0dc08dcd14f0",
+              "name": "`TOKEN_BLOCKED`, `MERCHANT_INACTIVE`, `KYC_REQUIRED` or `LIVE_TOKEN_REQUIRED`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n  \"amount\": \"300\",\n  \"reference\": \"REFUND-42-1\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "refunds"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/refunds",
+                  "variable": []
+                }
+              },
+              "status": "Forbidden"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Dépôt introuvable.\",\n  \"code\": \"DEPOSIT_NOT_FOUND\"\n}",
+              "code": 404,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "3e8221a4-0e2a-4b16-abe8-9b614209d03d",
+              "name": "`PAYMENT_NOT_FOUND`, `DEPOSIT_NOT_FOUND` or `NOTIFICATION_NOT_FOUND`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n  \"amount\": \"300\",\n  \"reference\": \"REFUND-42-1\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "refunds"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/refunds",
+                  "variable": []
+                }
+              },
+              "status": "Not Found"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Un remboursement est déjà en cours pour ce dépôt.\",\n  \"code\": \"REFUND_IN_PROGRESS\"\n}",
+              "code": 409,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "dca301e4-2dea-4c54-af22-1650176e3ad3",
+              "name": "`NOT_A_PAYOUT`, `NOT_CANCELLABLE`, `DEPOSIT_NOT_COMPLETED`, `REFUND_IN_PROGRESS` or `DEPOSIT_ALREADY_REFUNDED`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n  \"amount\": \"300\",\n  \"reference\": \"REFUND-42-1\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "refunds"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/refunds",
+                  "variable": []
+                }
+              },
+              "status": "Conflict"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Numéro de téléphone invalide.\",\n  \"code\": \"INVALID_PHONE_NUMBER\"\n}",
+              "code": 422,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "0bd542b5-3b82-4b62-af22-49bc915c1a43",
+              "name": "Either the payment was refused at initiation — it was recorded and is returned in `data` with\n`status: failed` and `failure` — or the request is invalid (`VALIDATION_ERROR`, `INVALID_PHONE_NUMBER`,\n`UNSUPPORTED_COUNTRY`, `INVALID_CURRENCY`, `UNSUPPORTED_PROVIDER`, `INVALID_AMOUNT`, `AMOUNT_TOO_SMALL`,\n`AMOUNT_TOO_LARGE`, `AMOUNT_OUT_OF_BOUNDS`, `INSUFFICIENT_BALANCE`).\n",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n  \"amount\": \"300\",\n  \"reference\": \"REFUND-42-1\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "refunds"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/refunds",
+                  "variable": []
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "d82724da-cded-43e7-a094-3b2370a60f4a",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n  \"amount\": \"300\",\n  \"reference\": \"REFUND-42-1\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "refunds"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/refunds",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Service en maintenance, réessayez plus tard.\",\n  \"code\": \"MAINTENANCE\"\n}",
+              "code": 503,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "eb99bcb4-ed1b-4228-a27e-713f31955e16",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n  \"amount\": \"300\",\n  \"reference\": \"REFUND-42-1\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "refunds"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/refunds",
+                  "variable": []
+                }
+              },
+              "status": "Service Unavailable"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Nouvelle référence à chaque exécution (clé d'idempotence : la renvoyer rend le même paiement).",
+                  "pm.collectionVariables.set('reference', 'POSTMAN-PAY-' + Date.now());"
+                ],
+                "id": "f44bae23-6492-482b-a715-c2e88d90dacc",
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 201, 202, 401, 403, 422, 429, 503)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,202,401,403,422,429,503]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}",
+                  "if (body.data && body.data.id) { pm.collectionVariables.set('payoutId', body.data.id); }"
+                ],
+                "id": "4d5dade2-b3be-4eac-af4e-f1043598e6ef",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "31f56471-eaf9-49e2-a31e-d648d26dd384",
+          "name": "POST /payouts — Send money to a wallet",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"amount\": \"500\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"{{reference}}\",\n  \"metadata\": {\n    \"source\": \"postman\"\n  }\n}"
+            },
+            "description": {
+              "content": "The recipient receives `amount`; your balance is debited immediately with `amount` + payout fees\n(`total_amount`), under a lock, and credited back in full if the payout fails. A decimal amount is refused\n(`INVALID_AMOUNT`) when the provider does not accept decimals in the currency.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "name": "Send money to a wallet",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "payouts"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/payouts",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"PAY-01JCX9A1B2C3D4E5F6G7H8J9K0\",\n    \"reference\": \"PAYOUT-17\",\n    \"operation\": \"payout\",\n    \"livemode\": false,\n    \"status\": \"completed\",\n    \"gateway_status\": \"ENQUEUED\",\n    \"amount\": \"5000.00\",\n    \"fee\": \"175.00\",\n    \"total_amount\": \"5175.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": \"MP2611110001\",\n    \"failure\": null,\n    \"metadata\": {\n      \"payoutId\": \"17\"\n    },\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": \"2026-11-11T10:00:42+00:00\"\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "01b68f16-2cf0-430f-a6f1-a04f371cc646",
+              "name": "The `reference` was already used by a completed payment, which is returned.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"5000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"PAYOUT-17\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"metadata\": {\n    \"payoutId\": \"17\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"PAY-01JCX9A1B2C3D4E5F6G7H8J9K0\",\n    \"reference\": \"PAYOUT-17\",\n    \"operation\": \"payout\",\n    \"livemode\": false,\n    \"status\": \"pending\",\n    \"gateway_status\": \"ENQUEUED\",\n    \"amount\": \"5000.00\",\n    \"fee\": \"175.00\",\n    \"total_amount\": \"5175.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": null,\n    \"failure\": null,\n    \"metadata\": {\n      \"payoutId\": \"17\"\n    },\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": null\n  }\n}",
+              "code": 201,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Mode of the key used.",
+                  "disabled": false,
+                  "key": "X-Labyrinthe-Mode",
+                  "value": "test"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "3824e4b2-590f-4f85-adb3-a8d348d23325",
+              "name": "Accepted, awaiting the final status (or resend of a pending `reference`).",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"5000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"PAYOUT-17\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"metadata\": {\n    \"payoutId\": \"17\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts",
+                  "variable": []
+                }
+              },
+              "status": "Created"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"PAY-01JCX9A1B2C3D4E5F6G7H8J9K0\",\n    \"reference\": \"PAYOUT-17\",\n    \"operation\": \"payout\",\n    \"livemode\": false,\n    \"status\": \"pending\",\n    \"gateway_status\": \"UNKNOWN\",\n    \"amount\": \"5000.00\",\n    \"fee\": \"175.00\",\n    \"total_amount\": \"5175.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": null,\n    \"failure\": null,\n    \"metadata\": {\n      \"payoutId\": \"17\"\n    },\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": null\n  }\n}",
+              "code": 202,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "eb84f0db-67c7-4b3b-a81a-c1c5613b7cac",
+              "name": "Unknown aggregator answer (`gateway_status: UNKNOWN`). The payment stays `pending` and its status is re-read automatically. Not a failure.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"5000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"PAYOUT-17\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"metadata\": {\n    \"payoutId\": \"17\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts",
+                  "variable": []
+                }
+              },
+              "status": "Accepted"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "af6207ba-47de-4e7f-ae16-bbf257e1ad85",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"5000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"PAYOUT-17\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"metadata\": {\n    \"payoutId\": \"17\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Vérification du compte (KYC) requise pour les paiements en production.\",\n  \"code\": \"KYC_REQUIRED\"\n}",
+              "code": 403,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "431ce3fd-e98b-4a7b-a774-e155a22488b5",
+              "name": "`TOKEN_BLOCKED`, `MERCHANT_INACTIVE`, `KYC_REQUIRED` or `LIVE_TOKEN_REQUIRED`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"5000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"PAYOUT-17\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"metadata\": {\n    \"payoutId\": \"17\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts",
+                  "variable": []
+                }
+              },
+              "status": "Forbidden"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Solde insuffisant.\",\n  \"code\": \"INSUFFICIENT_BALANCE\"\n}",
+              "code": 422,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "61eda4fe-8293-4639-a2c5-5a9822267d39",
+              "name": "Either the payment was refused at initiation — it was recorded and is returned in `data` with\n`status: failed` and `failure` — or the request is invalid (`VALIDATION_ERROR`, `INVALID_PHONE_NUMBER`,\n`UNSUPPORTED_COUNTRY`, `INVALID_CURRENCY`, `UNSUPPORTED_PROVIDER`, `INVALID_AMOUNT`, `AMOUNT_TOO_SMALL`,\n`AMOUNT_TOO_LARGE`, `AMOUNT_OUT_OF_BOUNDS`, `INSUFFICIENT_BALANCE`).\n",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"5000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"PAYOUT-17\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"metadata\": {\n    \"payoutId\": \"17\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts",
+                  "variable": []
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "04460214-8994-4cf1-a253-569bf857565a",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"5000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"PAYOUT-17\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"metadata\": {\n    \"payoutId\": \"17\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Service en maintenance, réessayez plus tard.\",\n  \"code\": \"MAINTENANCE\"\n}",
+              "code": 503,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "f119e53f-f7eb-43fe-abc1-bb4c9b2f185b",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"5000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"PAYOUT-17\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"metadata\": {\n    \"payoutId\": \"17\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts",
+                  "variable": []
+                }
+              },
+              "status": "Service Unavailable"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 404, 409, 429, 503)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,404,409,429,503]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}"
+                ],
+                "id": "95ad7472-c3b6-4948-afee-e36b1851f052",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "db1838cc-a017-4861-a3d3-46f25e1d632b",
+          "name": "POST /payouts/:id/cancel — Cancel a queued payout",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {
+              "content": "Only for a payout left in the provider queue (`gateway_status: ENQUEUED`). The status is re-read first.\nAsynchronous: the payout then moves to `failed` and your balance is credited back.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "name": "Cancel a queued payout",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "payouts",
+                ":id",
+                "cancel"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/payouts/:id/cancel",
+              "variable": [
+                {
+                  "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                  "disabled": false,
+                  "key": "id",
+                  "type": "any",
+                  "value": "{{payoutId}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"PAY-01JCX9A1B2C3D4E5F6G7H8J9K0\",\n    \"reference\": \"PAYOUT-17\",\n    \"operation\": \"payout\",\n    \"livemode\": false,\n    \"status\": \"pending\",\n    \"gateway_status\": \"ENQUEUED\",\n    \"amount\": \"5000.00\",\n    \"fee\": \"175.00\",\n    \"total_amount\": \"5175.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": null,\n    \"failure\": null,\n    \"metadata\": {\n      \"payoutId\": \"17\"\n    },\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": null\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Mode of the key used.",
+                  "disabled": false,
+                  "key": "X-Labyrinthe-Mode",
+                  "value": "test"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "2dc93825-d014-4396-aff0-0174a96a983d",
+              "name": "The payment.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts",
+                    ":id",
+                    "cancel"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts/:id/cancel",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "81747923-995b-403e-a668-6dce7a8df399",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts",
+                    ":id",
+                    "cancel"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts/:id/cancel",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Paiement introuvable.\",\n  \"code\": \"PAYMENT_NOT_FOUND\"\n}",
+              "code": 404,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "046f0071-3909-4a19-ae90-452c74b99f57",
+              "name": "`PAYMENT_NOT_FOUND`, `DEPOSIT_NOT_FOUND` or `NOTIFICATION_NOT_FOUND`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts",
+                    ":id",
+                    "cancel"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts/:id/cancel",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Ce retrait n'est plus en file d'attente.\",\n  \"code\": \"NOT_CANCELLABLE\"\n}",
+              "code": 409,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "c8fc27b4-ed3f-46e0-aec8-db07d1f2c02c",
+              "name": "`NOT_A_PAYOUT`, `NOT_CANCELLABLE`, `DEPOSIT_NOT_COMPLETED`, `REFUND_IN_PROGRESS` or `DEPOSIT_ALREADY_REFUNDED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts",
+                    ":id",
+                    "cancel"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts/:id/cancel",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Conflict"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "95fe5615-944f-40a5-a90d-9543436e8e34",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts",
+                    ":id",
+                    "cancel"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts/:id/cancel",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Too Many Requests"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Service en maintenance, réessayez plus tard.\",\n  \"code\": \"MAINTENANCE\"\n}",
+              "code": 503,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "8ebe211b-33bc-4eb7-acf4-594f50cd2d59",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payouts",
+                    ":id",
+                    "cancel"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payouts/:id/cancel",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Service Unavailable"
+            }
+          ]
+        }
+      ],
+      "name": "Payments"
+    },
+    {
+      "description": {
+        "content": "Notifications sent to the `callback_url`.",
+        "type": "text/markdown"
+      },
+      "event": [],
+      "id": "da0442d1-e84b-4791-ac41-dacf68ab3fa9",
+      "item": [
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 422, 429)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,422,429]);",
+                  "});",
+                  "pm.test('Success (200)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}",
+                  "pm.test('Paginated list', function () {",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "  pm.expect(body.meta).to.include.keys('current_page', 'last_page', 'per_page', 'total');",
+                  "});",
+                  "if (body.data && body.data[0]) { pm.collectionVariables.set('notificationId', String(body.data[0].id)); }"
+                ],
+                "id": "e8695926-9de1-4d22-a382-33714c0d6358",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "5eb19cd4-0675-48d7-a4eb-754b9c5c3d79",
+          "name": "GET /notifications — Notifications sent",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {
+              "content": "Notifications of the token's payments (mode of the key used), newest first.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "name": "Notifications sent",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "payment_id",
+                  "value": "{{paymentId}}"
+                },
+                {
+                  "disabled": true,
+                  "key": "status",
+                  "value": "pending"
+                },
+                {
+                  "disabled": false,
+                  "key": "per_page",
+                  "value": "20"
+                },
+                {
+                  "disabled": false,
+                  "key": "page",
+                  "value": "1"
+                }
+              ],
+              "raw": "{{baseUrl}}/V2/notifications?per_page=20&page=1",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 12,\n      \"event\": \"payment.completed\",\n      \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n      \"url\": \"https://boutique.example/webhooks/labpay\",\n      \"status\": \"delivered\",\n      \"attempts\": 1,\n      \"last_status_code\": 200,\n      \"last_error\": null,\n      \"next_attempt_at\": null,\n      \"delivered_at\": \"2026-11-11T10:00:43+00:00\",\n      \"created_at\": \"2026-11-11T10:00:42+00:00\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"last_page\": 1,\n    \"per_page\": 20,\n    \"total\": 1\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "90720109-4d47-4da5-ad54-cf4eb921a442",
+              "name": "Paginated notifications.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "notifications"
+                  ],
+                  "query": [
+                    {
+                      "key": "payment_id",
+                      "value": "string"
+                    },
+                    {
+                      "key": "status",
+                      "value": "abandoned"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "page",
+                      "value": "467"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/notifications?payment_id=string&status=abandoned&per_page=20&page=467",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "6f008e88-56bf-4262-ac79-7513414cc92d",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "notifications"
+                  ],
+                  "query": [
+                    {
+                      "key": "payment_id",
+                      "value": "string"
+                    },
+                    {
+                      "key": "status",
+                      "value": "abandoned"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "page",
+                      "value": "467"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/notifications?payment_id=string&status=abandoned&per_page=20&page=467",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"The selected country is invalid.\",\n  \"errors\": {\n    \"country\": [\n      \"The selected country is invalid.\"\n    ]\n  }\n}",
+              "code": 422,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "2d2eb212-0412-408c-ab9c-cbc142a1cbae",
+              "name": "Invalid parameters. On `GET /providers`, `/availability` and `/notifications` the body has no `code`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "notifications"
+                  ],
+                  "query": [
+                    {
+                      "key": "payment_id",
+                      "value": "string"
+                    },
+                    {
+                      "key": "status",
+                      "value": "abandoned"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "page",
+                      "value": "467"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/notifications?payment_id=string&status=abandoned&per_page=20&page=467",
+                  "variable": []
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "5570de96-d482-4a4d-aac1-ed7e24b8407a",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "notifications"
+                  ],
+                  "query": [
+                    {
+                      "key": "payment_id",
+                      "value": "string"
+                    },
+                    {
+                      "key": "status",
+                      "value": "abandoned"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "page",
+                      "value": "467"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/notifications?payment_id=string&status=abandoned&per_page=20&page=467",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (202, 401, 404, 429)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([202,401,404,429]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}"
+                ],
+                "id": "f06f87dd-55f1-407d-a45e-0c59138cecf6",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "943e611d-3647-4c52-a8c0-8623bd1bbe31",
+          "name": "POST /notifications/:id/resend — Resend a notification",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {
+              "content": "A new notification (same event, same URL, up-to-date payment) is created and delivered; history is kept.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "name": "Resend a notification",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "notifications",
+                ":id",
+                "resend"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/notifications/:id/resend",
+              "variable": [
+                {
+                  "description": "(Required) ",
+                  "disabled": false,
+                  "key": "id",
+                  "type": "any",
+                  "value": "{{notificationId}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": 13,\n    \"event\": \"payment.completed\",\n    \"payment_id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n    \"url\": \"https://boutique.example/webhooks/labpay\",\n    \"status\": \"pending\",\n    \"attempts\": 0,\n    \"last_status_code\": null,\n    \"last_error\": null,\n    \"next_attempt_at\": \"2026-11-11T10:05:00+00:00\",\n    \"delivered_at\": null,\n    \"created_at\": \"2026-11-11T10:00:42+00:00\"\n  }\n}",
+              "code": 202,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "45aefe81-e5c2-4642-a376-0bdc767e184d",
+              "name": "The new notification.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "notifications",
+                    ":id",
+                    "resend"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/notifications/:id/resend",
+                  "variable": [
+                    {
+                      "description": "(Required) ",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "467"
+                    }
+                  ]
+                }
+              },
+              "status": "Accepted"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "fd0d5558-6f5d-4311-aa80-1ae623d96bc5",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "notifications",
+                    ":id",
+                    "resend"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/notifications/:id/resend",
+                  "variable": [
+                    {
+                      "description": "(Required) ",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "467"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Notification introuvable.\",\n  \"code\": \"NOTIFICATION_NOT_FOUND\"\n}",
+              "code": 404,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "486eac02-5cfc-472c-ae88-94edbdd89044",
+              "name": "`PAYMENT_NOT_FOUND`, `DEPOSIT_NOT_FOUND` or `NOTIFICATION_NOT_FOUND`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "notifications",
+                    ":id",
+                    "resend"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/notifications/:id/resend",
+                  "variable": [
+                    {
+                      "description": "(Required) ",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "467"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "606979e0-e228-474d-a79c-0e270e1a5526",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "notifications",
+                    ":id",
+                    "resend"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/notifications/:id/resend",
+                  "variable": [
+                    {
+                      "description": "(Required) ",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "467"
+                    }
+                  ]
+                }
+              },
+              "status": "Too Many Requests"
+            }
+          ]
+        }
+      ],
+      "name": "Notifications"
+    },
+    {
+      "description": {
+        "content": "Rotate the signing secret (the previous one stays valid 24 h) or the test key (the previous one stops working immediately). Live token only: with a test key, `403 LIVE_TOKEN_REQUIRED`. Run these on purpose, never in a routine run with a live token.",
+        "type": "text/markdown"
+      },
+      "id": "24e6381a-8734-4816-a26c-644c93054c33",
+      "item": [
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 403, 429)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,403,429]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}"
+                ],
+                "id": "d9ecf8d4-5cd2-482f-a676-1233fa7be3e5",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "bc0824ff-e2d0-4305-a8aa-9cf125423be6",
+          "name": "POST /account/webhook-secret/rotate — Rotate the signing secret",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {
+              "content": "The previous secret stays accepted for 24 h. Live token only.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "name": "Rotate the signing secret",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "account",
+                "webhook-secret",
+                "rotate"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/account/webhook-secret/rotate",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"webhook_secret\": \"whsec_xxxxxxxxxxxxxxxx\",\n    \"webhook_secret_previous_expires_at\": \"2026-11-12T10:00:00+00:00\"\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "73c9cbcc-8371-419e-a974-253bde874cd1",
+              "name": "The new secret.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "account",
+                    "webhook-secret",
+                    "rotate"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/account/webhook-secret/rotate",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "199ec748-6e3a-46d6-acd9-3699fe680727",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "account",
+                    "webhook-secret",
+                    "rotate"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/account/webhook-secret/rotate",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Cette opération exige le token live.\",\n  \"code\": \"LIVE_TOKEN_REQUIRED\"\n}",
+              "code": 403,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "cfc32db6-8aec-4cc7-a894-c18af1556d2f",
+              "name": "`TOKEN_BLOCKED`, `MERCHANT_INACTIVE`, `KYC_REQUIRED` or `LIVE_TOKEN_REQUIRED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "account",
+                    "webhook-secret",
+                    "rotate"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/account/webhook-secret/rotate",
+                  "variable": []
+                }
+              },
+              "status": "Forbidden"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "d2f97dd9-c1cf-4280-a9a1-33b9dd0b5d0b",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "account",
+                    "webhook-secret",
+                    "rotate"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/account/webhook-secret/rotate",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 403, 429)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,403,429]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}"
+                ],
+                "id": "adba8a27-0108-4e29-a6fa-441955cd9a96",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "6b2d17f6-58db-4839-a3b4-b212c3c83bc0",
+          "name": "POST /account/test-key/rotate — Rotate the test key",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {
+              "content": "The previous test key stops working immediately. Live token only.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "name": "Rotate the test key",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "account",
+                "test-key",
+                "rotate"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/account/test-key/rotate",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"test_key\": \"test_xxxxxxxxxxxxxxxx\"\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "a1b8310b-342b-491e-a30b-8339c7b34202",
+              "name": "The new test key.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "account",
+                    "test-key",
+                    "rotate"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/account/test-key/rotate",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "37e7bc57-d2d0-4cb2-aa2e-a6f419425cd9",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "account",
+                    "test-key",
+                    "rotate"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/account/test-key/rotate",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Cette opération exige le token live.\",\n  \"code\": \"LIVE_TOKEN_REQUIRED\"\n}",
+              "code": 403,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "67853dc4-3f14-49dc-a5e7-852edadd1bd3",
+              "name": "`TOKEN_BLOCKED`, `MERCHANT_INACTIVE`, `KYC_REQUIRED` or `LIVE_TOKEN_REQUIRED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "account",
+                    "test-key",
+                    "rotate"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/account/test-key/rotate",
+                  "variable": []
+                }
+              },
+              "status": "Forbidden"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "6e3003bc-2295-4efb-acb6-1efd9b2a9e20",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "account",
+                    "test-key",
+                    "rotate"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/account/test-key/rotate",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            }
+          ]
+        }
+      ],
+      "name": "Account — key rotation (live token only)"
+    }
+  ],
+  "variable": [
+    {
+      "description": "API root without /V2 (see the environments).",
+      "key": "baseUrl",
+      "type": "string",
+      "value": "http://localhost:8000/api"
+    },
+    {
+      "description": "Test key test_… (sandbox) or live token. Never commit it.",
+      "key": "token",
+      "type": "secret",
+      "value": ""
+    },
+    {
+      "description": "Unique reference generated before each payment request (idempotency key).",
+      "key": "reference",
+      "type": "string",
+      "value": ""
+    },
+    {
+      "description": "Set by \"POST /deposits\", used by the payment, sync and refund requests.",
+      "key": "paymentId",
+      "type": "string",
+      "value": ""
+    },
+    {
+      "description": "Set by \"POST /payouts\", used by \"POST /payouts/:id/cancel\".",
+      "key": "payoutId",
+      "type": "string",
+      "value": ""
+    },
+    {
+      "description": "Set by \"GET /notifications\" (first notification), used by the resend request.",
+      "key": "notificationId",
+      "type": "string",
+      "value": ""
+    }
+  ]
+}
