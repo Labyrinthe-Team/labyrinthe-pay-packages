@@ -53,3 +53,58 @@ opened after a **final failure** (or a mode change). An unanswered refund reques
 
 | Setting | |
 |---|---|
+| Enable, Title, Description | as for any gateway |
+| Test mode | uses the test key (`test_…`, sandbox); on by default |
+| API token (live), Test key, Signing secret | stored **encrypted** (libsodium secretbox, key derived from the WordPress salts); a test key is refused in the live field |
+| Reference prefix | `WC` by default; change it if several shops share one token |
+| Debug log | logs every request (errors are always logged) |
+
+The page warns when the key of the active mode is missing, when the shop currency is neither CDF nor USD, when the
+signing secret is missing, when a secret became unreadable (salts changed) and when the site is not on HTTPS (no
+notifications: the waiting page and the sync still update the orders).
+
+## Security
+
+- Nonces on every AJAX action, order key required for the status, prediction rate-limited per IP (30 / 10 min).
+- Webhook authenticated only by the signature (public REST route), body limited to 64 KB; invalid → `400`, missing
+  secret or locked order → `503` (LabPay retries), unknown order → `200` (acknowledged, ignored).
+- Capabilities and nonces of the WooCommerce settings and refund screens; output escaped, input sanitized.
+- Logs (*WooCommerce > Status > Logs*, source `labpay`): payment IDs, codes and statuses only; never a key, a secret,
+  a signature or a full phone number.
+- The SDK and its dependencies are prefixed (`LabPay\WooCommerce\Vendor\…`, PHP-Scoper) to avoid conflicts with other
+  plugins; HTTP goes through `wp_remote_request()` (proxy and certificates of WordPress apply).
+
+## Hooks
+
+| Filter | |
+|---|---|
+| `labpay_wc_base_url` (or constant `LABPAY_WC_BASE_URL`) | API root, e.g. `http://localhost:8000/api` (`/V2` is added) |
+| `labpay_wc_callback_url` | notification address sent with payments (`null`: none) |
+| `labpay_wc_reference` | reference of an attempt (keep `<prefix>-<order ID>-` at the start) |
+| `labpay_wc_currencies` | accepted currencies (`CDF`, `USD`) |
+| `labpay_wc_http_client` | PSR-18 client used by the SDK |
+
+## Development
+
+```bash
+composer install                    # dev tools, then vendor-prefixed/ (PHP-Scoper, tools/php-scoper)
+php bin/install-wp-tests.php        # WordPress + WooCommerce in .wp-tests/, MySQL database labpay_wp_tests
+#   --from=<other>/.wp-tests        # copy an existing WordPress/WooCommerce instead of downloading
+vendor/bin/phpunit                  # 39 tests, WordPress test suite + WooCommerce (HPOS); LABPAY_TEST_HPOS=no for posts storage
+vendor/bin/phpcs                    # WordPress Coding Standards
+vendor/bin/phpstan analyse --memory-limit=1G   # level 8, WordPress and WooCommerce stubs
+php bin/i18n.php                    # .pot, fr_FR .po/.mo/.l10n.php/.json (WP-CLI, tools/wp-cli)
+php bin/build-zip.php               # dist/labpay-for-woocommerce.zip
+```
+
+Tests never hit the network: `pre_http_request` serves the LabPay answers (`tests/Support/HttpMock.php`).
+
+Layout: `labpay-for-woocommerce.php` (bootstrap), `includes/` (`class-gateway.php`, `class-order-payments.php` —
+deposit, status rules, refunds, lock —, `class-webhook-controller.php`, `class-ajax.php`, `class-waiting-page.php`,
+`blocks/class-payment-method.php`, `class-settings.php`, `class-crypto.php`, `class-client-factory.php`,
+`http/class-wp-http-client.php`), `assets/` (classic and block checkout scripts, waiting page), `languages/`,
+`bin/` (prefixing, test install, i18n, zip), `tests/`.
+
+## License
+
+GPL-2.0-or-later — see [LICENSE](LICENSE). Bundled code under `vendor-prefixed/` keeps its own (MIT) license.
