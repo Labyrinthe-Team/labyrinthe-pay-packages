@@ -74,3 +74,78 @@ class WebhooksTest {
 
   @Test
   void acceptsEitherSignatureDuringARotation() {
+    String header = sign(RAW, "whsec_new", SECRET);
+
+    assertEquals(2, header.split("v1=", -1).length - 1);
+    assertTrue(Webhooks.isValid(RAW, header, List.of(SECRET), null, at(NOW)));
+    assertTrue(Webhooks.isValid(RAW, header, List.of("whsec_new"), null, at(NOW)));
+    assertFalse(Webhooks.isValid(RAW, header, List.of("whsec_other"), null, at(NOW)));
+    assertTrue(
+        Webhooks.isValid(RAW, sign(RAW, SECRET), List.of("whsec_new", SECRET), null, at(NOW)));
+    // En-tête en majuscules : accepté (hexadécimal insensible à la casse).
+    assertTrue(
+        Webhooks.isValid(
+            RAW,
+            header.toUpperCase().replace("V1=", "v1=").replace("T=", "t="),
+            List.of(SECRET),
+            null,
+            at(NOW)));
+  }
+
+  @Test
+  void refusesATamperedBodyAnOldTimestampAndMalformedHeaders() {
+    String header = sign(RAW, SECRET);
+    byte[] tampered = BODY.replace("1000.00", "9000.00").getBytes(StandardCharsets.UTF_8);
+
+    assertThrows(
+        SignatureVerificationException.class,
+        () -> Webhooks.constructEvent(tampered, header, List.of(SECRET), null, at(NOW)));
+    SignatureVerificationException old =
+        assertThrows(
+            SignatureVerificationException.class,
+            () -> Webhooks.verify(RAW, header, List.of(SECRET), null, at(NOW + 301)));
+    assertTrue(old.getMessage().contains("tolerance"));
+    assertTrue(Webhooks.isValid(RAW, header, List.of(SECRET), Duration.ZERO, at(NOW + 301)));
+    for (String bad : new String[] {"", "t=123", "v1=" + "a".repeat(64), "t=123,v1=abc", null}) {
+      assertThrows(
+          SignatureVerificationException.class,
+          () -> Webhooks.verify(RAW, bad, List.of(SECRET), null, at(NOW)),
+          String.valueOf(bad));
+    }
+  }
+
+  @Test
+  void refusesASignedBodyThatIsNotANotification() {
+    byte[] invalid = "{\"event\":\"payment.completed\"}".getBytes(StandardCharsets.UTF_8);
+    InvalidWebhookPayloadException e =
+        assertThrows(
+            InvalidWebhookPayloadException.class,
+            () ->
+                Webhooks.constructEvent(
+                    invalid, sign(invalid, SECRET), List.of(SECRET), null, at(NOW)));
+    assertTrue(e.getMessage().startsWith("Invalid notification payload"), e.getMessage());
+
+    byte[] notJson = "nope".getBytes(StandardCharsets.UTF_8);
+    assertThrows(
+        InvalidWebhookPayloadException.class,
+        () ->
+            Webhooks.constructEvent(
+                notJson, sign(notJson, SECRET), List.of(SECRET), null, at(NOW)));
+  }
+
+  @Test
+  void refusesAnEmptySecret() {
+    InvalidArgumentException e =
+        assertThrows(
+            InvalidArgumentException.class,
+            () -> Webhooks.verify(RAW, "t=1,v1=" + "a".repeat(64), ""));
+    assertEquals("INVALID_ARGUMENT", e.code());
+  }
+
+  @Test
+  void acceptsTextBodiesAndTheDefaultClock() {
+    String header = Webhooks.sign(RAW, SECRET);
+    assertEquals("ORDER-42", Webhooks.constructEvent(BODY, header, SECRET).payment().reference());
+    assertArrayEquals(RAW, BODY.getBytes(StandardCharsets.UTF_8));
+  }
+}
