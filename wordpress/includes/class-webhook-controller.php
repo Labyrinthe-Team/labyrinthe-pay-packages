@@ -85,3 +85,89 @@ final class Webhook_Controller {
 	 * @param \WP_REST_Request $request Requête.
 	 */
 	public function handle( \WP_REST_Request $request ): \WP_REST_Response {
+		$secret = $this->settings->secret( 'webhook_secret' );
+		if ( '' === $secret ) {
+			$this->logger->log( 'error', 'Notification received but no signing secret is configured (WooCommerce > Settings > Payments > LabPay).' );
+
+			return self::response( 503, 'not_configured' );
+		}
+
+		$raw = $request->get_body();
+		if ( strlen( $raw ) > self::MAX_BODY ) {
+			return self::response( 413, 'too_large' );
+		}
+
+		try {
+			$event = Webhook::constructEvent( $raw, (string) $request->get_header( 'x_labyrinthe_signature' ), $secret );
+		} catch ( SignatureVerificationException | InvalidWebhookPayloadException | InvalidArgumentException $e ) {
+			$this->logger->log( 'warning', 'Notification refused: ' . $e->getMessage() );
+
+			return self::response( 400, 'invalid_signature' );
+		}
+
+		$payment  = $event->payment;
+		$delivery = (string) $request->get_header( 'x_labyrinthe_delivery' );
+		$order    = $this->payments->find_order( $payment );
+		if ( null === $order ) {
+			$this->logger->log(
+				'warning',
+				'Notification for an unknown order: ignored.',
+				array(
+					'event'    => $event->name,
+					'delivery' => $delivery,
+					'payment'  => $payment->id,
+				)
+			);
+
+			return self::response( 200, 'ignored' );
+		}
+
+		try {
+			$result = $this->payments->apply( $order, $payment, 'webhook' );
+		} catch ( Lock_Exception $e ) {
+			return self::response( 503, 'locked' );
+		} catch ( \Throwable $e ) {
+			$this->logger->log(
+				'error',
+				'Notification processing failed.',
+				array(
+					'order'   => $order->get_id(),
+					'payment' => $payment->id,
+					'error'   => get_class( $e ) . ': ' . $e->getMessage(),
+				)
+			);
+
+			return self::response( 500, 'error' );
+		}
+
+		$this->logger->log(
+			'info',
+			'Notification processed.',
+			array(
+				'event'    => $event->name,
+				'delivery' => $delivery,
+				'order'    => $order->get_id(),
+				'payment'  => $payment->id,
+				'result'   => $result,
+			)
+		);
+
+		return self::response( 200, $result );
+	}
+
+	/**
+	 * Réponse JSON courte (jamais de détail interne).
+	 *
+	 * @param int    $status HTTP.
+	 * @param string $result Résultat.
+	 */
+	private static function response( int $status, string $result ): \WP_REST_Response {
+		return new \WP_REST_Response(
+			array(
+				'received' => $status < 300,
+				'result'   => $result,
+			),
+			$status
+		);
+	}
+}
