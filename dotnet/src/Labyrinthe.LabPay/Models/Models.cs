@@ -180,3 +180,184 @@ public sealed record Account
     }
 }
 
+/// <summary>A new signing secret (<c>POST /V2/account/webhook-secret/rotate</c>).</summary>
+/// <remarks><see cref="object.ToString"/> masks the secret.</remarks>
+public sealed record WebhookSecret
+{
+    /// <summary>The new secret (<c>whsec_…</c>).</summary>
+    public string Secret { get; init; } = string.Empty;
+
+    /// <summary>The previous secret stays accepted until this date (24 h).</summary>
+    public DateTimeOffset? PreviousExpiresAt { get; init; }
+
+    private bool PrintMembers(StringBuilder builder)
+    {
+        builder.Append("Secret = whsec_****, PreviousExpiresAt = ").Append(PreviousExpiresAt?.ToString("O", CultureInfo.InvariantCulture));
+        return true;
+    }
+}
+
+/// <summary>Amount limits of a currency.</summary>
+public sealed record AmountLimits
+{
+    /// <summary>Smallest amount.</summary>
+    public string? MinAmount { get; init; }
+
+    /// <summary>Largest amount.</summary>
+    public string? MaxAmount { get; init; }
+}
+
+/// <summary>A country open to payments (<c>GET /V2/countries</c>).</summary>
+public sealed record Country
+{
+    /// <summary>ISO 3166-1 alpha-3 code, e.g. <c>COD</c>.</summary>
+    public string Code { get; init; } = string.Empty;
+
+    /// <summary>Name.</summary>
+    public string? Name { get; init; }
+
+    /// <summary>Dial code without "+", e.g. <c>243</c>.</summary>
+    public string? DialCode { get; init; }
+
+    /// <summary>Accepted currencies.</summary>
+    public IReadOnlyList<string> Currencies { get; init; } = System.Array.Empty<string>();
+
+    /// <summary>Amount limits per currency.</summary>
+    public IReadOnlyDictionary<string, AmountLimits> Limits { get; init; } = new Dictionary<string, AmountLimits>(StringComparer.Ordinal);
+
+    /// <summary>Country of a local number sent without <c>country</c>.</summary>
+    public bool IsDefault { get; init; }
+}
+
+/// <summary>Rules of a provider for one currency.</summary>
+public sealed record ProviderCurrency
+{
+    /// <summary>Smallest amount.</summary>
+    public string? MinAmount { get; init; }
+
+    /// <summary>Largest amount.</summary>
+    public string? MaxAmount { get; init; }
+
+    /// <summary>Decimals accepted in the amount (e.g. <c>NONE</c>: whole amount only).</summary>
+    public string? AmountDecimals { get; init; }
+
+    /// <summary>Availability, e.g. <c>OPERATIONAL</c>.</summary>
+    public string? Status { get; init; }
+
+    /// <summary>How the PIN prompt is shown (raw JSON value).</summary>
+    public JsonElement? PinPrompt { get; init; }
+
+    /// <summary>Whether the PIN prompt can be shown again (raw JSON value).</summary>
+    public JsonElement? PinPromptRevivable { get; init; }
+
+    /// <summary>Instructions for the customer (raw JSON value).</summary>
+    public JsonElement? PinPromptInstructions { get; init; }
+}
+
+/// <summary>A provider and its rules for an operation (<c>GET /V2/providers</c>).</summary>
+public sealed record Provider
+{
+    /// <summary>Provider code, to pass as <c>Provider</c>, e.g. <c>VODACOM_MPESA_COD</c>.</summary>
+    public string Code { get; init; } = string.Empty;
+
+    /// <summary>ISO alpha-3 country.</summary>
+    public string? Country { get; init; }
+
+    /// <summary>Name.</summary>
+    public string? Name { get; init; }
+
+    /// <summary>Name shown to the customer.</summary>
+    public string? NameDisplayedToCustomer { get; init; }
+
+    /// <summary>Logo URL.</summary>
+    public string? Logo { get; init; }
+
+    /// <summary>Rules per currency.</summary>
+    public IReadOnlyDictionary<string, ProviderCurrency> Currencies { get; init; } = new Dictionary<string, ProviderCurrency>(StringComparer.Ordinal);
+}
+
+/// <summary>Real-time availability of a provider (<c>GET /V2/availability</c>).</summary>
+public sealed record ProviderAvailability
+{
+    /// <summary>Provider code.</summary>
+    public string Provider { get; init; } = string.Empty;
+
+    /// <summary>ISO alpha-3 country.</summary>
+    public string? Country { get; init; }
+
+    /// <summary>Per operation type, e.g. <c>{ DEPOSIT: OPERATIONAL, PAYOUT: DELAYED }</c> (<c>OPERATIONAL</c>,
+    /// <c>DELAYED</c>: payouts queued, <c>CLOSED</c>); a value may be <see langword="null"/>.</summary>
+    public IReadOnlyDictionary<string, string?> Statuses { get; init; } = new Dictionary<string, string?>(StringComparer.Ordinal);
+}
+
+/// <summary>A validated number and its predicted provider (<c>POST /V2/predict-provider</c>).</summary>
+public sealed record ProviderPrediction
+{
+    /// <summary>International format without "+", e.g. <c>243813456789</c>.</summary>
+    public string Phone { get; init; } = string.Empty;
+
+    /// <summary>Provider code.</summary>
+    public string Provider { get; init; } = string.Empty;
+
+    /// <summary>ISO alpha-3 country.</summary>
+    public string Country { get; init; } = string.Empty;
+}
+
+/// <summary>A notification sent (or to be sent) to your <c>callback_url</c>.</summary>
+public sealed record Notification
+{
+    /// <summary>Identifier, also the <c>X-Labyrinthe-Delivery</c> header of the delivery.</summary>
+    public long Id { get; init; }
+
+    /// <summary>Event name, e.g. <c>payment.completed</c>.</summary>
+    public string EventName { get; init; } = "unknown";
+
+    /// <summary>The event as an enum (<see cref="WebhookEventType.Unknown"/> for a newer event).</summary>
+    public WebhookEventType EventType => ApiValues.ParseEventType(EventName);
+
+    /// <summary>Id of the payment.</summary>
+    public string? PaymentId { get; init; }
+
+    /// <summary>Destination URL.</summary>
+    public string? Url { get; init; }
+
+    /// <summary>Delivery status.</summary>
+    public NotificationStatus Status { get; init; }
+
+    /// <summary>Number of attempts made.</summary>
+    public int Attempts { get; init; }
+
+    /// <summary>HTTP status of the last attempt.</summary>
+    public int? LastStatusCode { get; init; }
+
+    /// <summary>Error of the last attempt.</summary>
+    public string? LastError { get; init; }
+
+    /// <summary>Date of the next attempt.</summary>
+    public DateTimeOffset? NextAttemptAt { get; init; }
+
+    /// <summary>Delivery date.</summary>
+    public DateTimeOffset? DeliveredAt { get; init; }
+
+    /// <summary>Creation date.</summary>
+    public DateTimeOffset? CreatedAt { get; init; }
+}
+
+/// <summary>Status and headers of a response received from the API (<see cref="LabPayClient.LastResponse"/>).</summary>
+public sealed class ResponseInfo
+{
+    internal ResponseInfo(int status, IReadOnlyDictionary<string, string> headers)
+    {
+        Status = status;
+        Headers = headers;
+    }
+
+    /// <summary>HTTP status.</summary>
+    public int Status { get; }
+
+    /// <summary>Response headers (case-insensitive names).</summary>
+    public IReadOnlyDictionary<string, string> Headers { get; }
+
+    /// <summary>Mode of the key that made the request (<c>X-Labyrinthe-Mode</c>); <see cref="LabPayMode.Unknown"/> when absent.</summary>
+    public LabPayMode Mode => Headers.TryGetValue("X-Labyrinthe-Mode", out var mode) ? ApiValues.ParseMode(mode) : LabPayMode.Unknown;
+}
