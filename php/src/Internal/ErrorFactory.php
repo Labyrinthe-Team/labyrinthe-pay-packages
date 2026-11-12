@@ -69,3 +69,74 @@ final class ErrorFactory
     ];
 
     private function __construct()
+    {
+    }
+
+    /**
+     * @param array<string, string> $headers lower-case names
+     */
+    public static function fromResponse(int $status, string $rawBody, array $headers): ApiException
+    {
+        try {
+            $decoded = json_decode($rawBody, true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            $decoded = null;
+        }
+        $decoded = \is_array($decoded) ? $decoded : [];
+
+        $code = isset($decoded['code']) && \is_string($decoded['code']) && $decoded['code'] !== '' ? $decoded['code'] : null;
+        $message = isset($decoded['message']) && \is_string($decoded['message']) && $decoded['message'] !== '' ? $decoded['message'] : null;
+        $errors = self::errors($decoded['errors'] ?? null);
+
+        $code ??= match (true) {
+            $status === 429 => self::RATE_LIMITED,
+            $status === 422 && $errors !== [] => 'VALIDATION_ERROR',
+            default => self::HTTP_ERROR,
+        };
+        $message ??= \sprintf('The LabPay API returned HTTP %d.', $status);
+
+        $class = self::BY_CODE[$code] ?? self::classForStatus($status);
+
+        return new $class($message, $code, $status, $errors, $headers);
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private static function errors(mixed $errors): array
+    {
+        if (!\is_array($errors)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($errors as $field => $messages) {
+            $list = [];
+            foreach (\is_array($messages) ? $messages : [$messages] as $message) {
+                if (\is_string($message)) {
+                    $list[] = $message;
+                }
+            }
+            $result[(string) $field] = $list;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return class-string<ApiException>
+     */
+    private static function classForStatus(int $status): string
+    {
+        return match (true) {
+            $status === 401 => AuthenticationException::class,
+            $status === 403 => PermissionException::class,
+            $status === 404 => NotFoundException::class,
+            $status === 409 => ConflictException::class,
+            $status === 422 => InvalidRequestException::class,
+            $status === 429 => RateLimitException::class,
+            $status >= 500 => ServiceUnavailableException::class,
+            default => ApiException::class,
+        };
+    }
+}
