@@ -1,0 +1,77 @@
+{
+    "name": "labyrinthe/labpay-php",
+    "description": "Official PHP SDK for LabPay: collect and send Mobile Money (M-Pesa, Airtel Money, Orange Money) in the DR Congo.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "labpay",
+        "labyrinthe",
+        "mobile-money",
+        "m-pesa",
+        "airtel-money",
+        "orange-money",
+        "payments",
+        "drc",
+        "congo",
+        "rdc",
+        "psr-18",
+        "sdk"
+    ],
+    "homepage": "https://docs.pay.labyrinthe-rdc.com",
+    "authors": [
+        {
+            "name": "Labyrinthe Innovations SARL",
+            "email": "contact@labyrinthe-rdc.com",
+            "homepage": "https://pay.labyrinthe-rdc.com"
+        }
+    ],
+    "support": {
+        "email": "contact@labyrinthe-rdc.com",
+        "docs": "https://docs.pay.labyrinthe-rdc.com"
+    },
+    "require": {
+        "php": "^8.1",
+        "ext-json": "*",
+        "guzzlehttp/guzzle": "^7.5",
+        "guzzlehttp/psr7": "^2.4",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.0",
+        "psr/http-message": "^1.1 || ^2.0",
+        "psr/log": "^2.0 || ^3.0"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^10.5 || ^11.5 || ^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Labyrinthe\\LabPay\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Labyrinthe\\LabPay\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "check": [
+            "@analyse",
+            "@test"
+        ]
+    },
+    "scripts-descriptions": {
+        "test": "Run the unit tests (no network).",
+        "analyse": "Run PHPStan at level max.",
+        "check": "Analyse and test."
+    },
+    "config": {
+        "sort-packages": true,
+        "preferred-install": "dist"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
