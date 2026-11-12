@@ -65,3 +65,70 @@ export class LabPay {
   readonly deposits: Deposits;
   readonly payouts: Payouts;
   readonly refunds: Refunds;
+  readonly payments: Payments;
+  readonly providers: Providers;
+  readonly account: AccountResource;
+  readonly notifications: Notifications;
+  /** Base URL of the V2 API, e.g. "https://api.labyrinthe-rdc.com/api/V2". */
+  readonly baseUrl: string;
+
+  readonly #apiKey: string;
+  readonly #transport: Transport;
+
+  constructor(options: LabPayOptions = {}) {
+    const apiKey = (options.apiKey ?? env('LABPAY_API_KEY') ?? '').trim();
+    if (apiKey === '') {
+      throw new InvalidArgumentError('A LabPay API token or test key (test_…) is required (apiKey option or LABPAY_API_KEY).');
+    }
+    if (isBrowser() && options.dangerouslyAllowBrowser !== true) {
+      throw new InvalidArgumentError('The LabPay SDK must run server-side: the API key would be exposed in a browser.');
+    }
+    const timeoutMs = options.timeoutMs ?? 30_000;
+    const maxRetries = options.maxRetries ?? 2;
+    const maxRetryWaitMs = options.maxRetryWaitMs ?? 10_000;
+    if (!(timeoutMs > 0)) throw new InvalidArgumentError('timeoutMs must be greater than 0.');
+    if (!Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 10) throw new InvalidArgumentError('maxRetries must be an integer between 0 and 10.');
+    if (!(maxRetryWaitMs >= 0)) throw new InvalidArgumentError('maxRetryWaitMs cannot be negative.');
+
+    const fetchImpl = options.fetch ?? (typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : undefined);
+    if (fetchImpl === undefined) {
+      throw new InvalidArgumentError('No fetch implementation available: use Node 18+ or pass the fetch option.');
+    }
+
+    this.#apiKey = apiKey;
+    this.baseUrl = normalizeBaseUrl(options.baseUrl ?? env('LABPAY_BASE_URL') ?? DEFAULT_BASE_URL);
+    this.#transport = new Transport({
+      apiKey,
+      baseUrl: this.baseUrl,
+      timeoutMs,
+      maxRetries,
+      maxRetryWaitMs,
+      fetch: fetchImpl,
+      sleep: options.sleep ?? defaultSleep,
+      userAgentSuffix: options.userAgentSuffix,
+    });
+
+    const autoReference = options.autoReference ?? true;
+    this.deposits = new Deposits(this.#transport, autoReference);
+    this.payouts = new Payouts(this.#transport, autoReference);
+    this.refunds = new Refunds(this.#transport, autoReference);
+    this.payments = new Payments(this.#transport, autoReference);
+    this.providers = new Providers(this.#transport, autoReference);
+    this.account = new AccountResource(this.#transport, autoReference);
+    this.notifications = new Notifications(this.#transport, autoReference);
+  }
+
+  /** True with a test key (`test_…`): sandbox, no real money, separate balances. */
+  get isTestMode(): boolean {
+    return this.#apiKey.startsWith(TEST_KEY_PREFIX);
+  }
+
+  /** Status and headers of the last response received (e.g. its X-Labyrinthe-Mode). */
+  get lastResponse(): ResponseInfo | null {
+    return this.#transport.lastResponse;
+  }
+
+  toJSON(): Record<string, unknown> {
+    return { baseUrl: this.baseUrl, testMode: this.isTestMode };
+  }
+}
