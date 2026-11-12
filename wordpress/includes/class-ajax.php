@@ -126,3 +126,130 @@ final class Ajax {
 		}
 
 		$state   = $this->payments->sync( $order );
+		$payload = array(
+			'state'   => $state,
+			'message' => self::message( $state ),
+		);
+		if ( 'completed' === $state || 'on-hold' === $state ) {
+			$payload['redirect'] = $order->get_checkout_order_received_url();
+		}
+		if ( 'failed' === $state && $order->needs_payment() ) {
+			$payload['retry_url'] = $order->get_checkout_payment_url();
+		}
+
+		return $payload;
+	}
+
+	/**
+	 * Opérateurs pour le dépôt dans une devise (cache de 6 h par mode).
+	 *
+	 * @param string $currency Devise.
+	 * @return list<array{code: string, name: string}>
+	 */
+	public function providers( string $currency ): array {
+		$mode      = $this->settings->mode();
+		$transient = 'labpay_wc_providers_' . $mode;
+		$cached    = get_transient( $transient );
+		if ( ! is_array( $cached ) ) {
+			$cached = array();
+			try {
+				foreach ( $this->clients->make( $mode, 10.0, 0 )->providers->list( Operation::Deposit ) as $provider ) {
+					$cached[] = array(
+						'code'       => $provider->provider,
+						'name'       => (string) ( $provider->nameDisplayedToCustomer ?? $provider->name ?? $provider->provider ), // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- propriété du SDK.
+						'currencies' => array_keys( $provider->currencies ),
+					);
+				}
+				set_transient( $transient, $cached, 6 * HOUR_IN_SECONDS );
+			} catch ( \Throwable $e ) {
+				$this->logger->log( 'warning', 'Provider list unavailable.', array( 'error' => Order_Payments::error_code( $e ) ) );
+				// Court cache négatif : pas un appel à l'API par visiteur pendant une panne.
+				set_transient( $transient, array(), 5 * MINUTE_IN_SECONDS );
+			}
+		}
+
+		$list = array();
+		foreach ( $cached as $provider ) {
+			if ( is_array( $provider ) && ( array() === ( $provider['currencies'] ?? array() ) || in_array( $currency, (array) $provider['currencies'], true ) ) ) {
+				$list[] = array(
+					'code' => (string) $provider['code'],
+					'name' => (string) $provider['name'],
+				);
+			}
+		}
+
+		return $list;
+	}
+
+	/**
+	 * Valide un numéro et prédit son opérateur (sans créer de paiement).
+	 *
+	 * @param string $phone Numéro normalisé ('' si invalide).
+	 * @param string $ip    Adresse du visiteur (limite de requêtes).
+	 * @return array<string, mixed>
+	 */
+	public function predict( string $phone, string $ip ): array {
+		if ( '' === $phone ) {
+			return array( 'valid' => false );
+		}
+		$bucket = 'labpay_wc_rate_' . md5( $ip );
+		$count  = (int) get_transient( $bucket );
+		if ( $count >= self::PREDICT_LIMIT ) {
+			return array(
+				'valid'   => null,
+				'limited' => true,
+			);
+		}
+		set_transient( $bucket, $count + 1, 10 * MINUTE_IN_SECONDS );
+
+		try {
+			$prediction = $this->clients->make( $this->settings->mode(), 10.0, 0 )->providers->predict( $phone );
+		} catch ( \LabPay\WooCommerce\Vendor\Labyrinthe\LabPay\Exception\InvalidRequestException $e ) {
+			return array( 'valid' => false );
+		} catch ( \Throwable $e ) {
+			// Prédiction indisponible : le paiement reste possible (LabPay déduit l'opérateur).
+			return array( 'valid' => null );
+		}
+
+		$name = $prediction->provider;
+		foreach ( $this->providers( get_woocommerce_currency() ) as $provider ) {
+			if ( $provider['code'] === $prediction->provider ) {
+				$name = $provider['name'];
+			}
+		}
+
+		return array(
+			'valid'    => true,
+			'provider' => $prediction->provider,
+			'name'     => $name,
+			'country'  => $prediction->country,
+		);
+	}
+
+	/**
+	 * Message du statut.
+	 *
+	 * @param string $state État.
+	 */
+	public static function message( string $state ): string {
+		switch ( $state ) {
+			case 'completed':
+				return __( 'Payment received. Thank you!', 'labpay-for-woocommerce' );
+			case 'on-hold':
+				return __( 'Payment received: the shop is checking it.', 'labpay-for-woocommerce' );
+			case 'failed':
+				return __( 'The payment did not go through (refused, cancelled or expired). You have not been charged.', 'labpay-for-woocommerce' );
+			default:
+				return __( 'Confirm the payment on your phone: enter your Mobile Money PIN when asked.', 'labpay-for-woocommerce' );
+		}
+	}
+
+	/**
+	 * Adresse IP du visiteur (REMOTE_ADDR : les en-têtes de proxy se falsifient).
+	 */
+	private static function client_ip(): string {
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+
+		return '' !== $ip ? $ip : 'unknown';
+	}
+}
