@@ -54,3 +54,58 @@ final class Settings {
 		$options = is_array( $options ) ? $options : array();
 		$value   = $options[ $key ] ?? ( self::defaults()[ $key ] ?? '' );
 
+		return is_scalar( $value ) ? (string) $value : '';
+	}
+
+	/**
+	 * Secret déchiffré ('' s'il n'est pas configuré ou illisible).
+	 *
+	 * @param string $key api_token, test_key ou webhook_secret.
+	 */
+	public function secret( string $key ): string {
+		return in_array( $key, self::SECRET_FIELDS, true ) ? Crypto::decrypt( $this->get( $key ) ) : '';
+	}
+
+	/**
+	 * Vrai si un secret est enregistré mais illisible (salts WordPress changés).
+	 *
+	 * @param string $key Clé.
+	 */
+	public function secret_unreadable( string $key ): bool {
+		$stored = $this->get( $key );
+
+		return '' !== $stored && '' === Crypto::decrypt( $stored );
+	}
+
+	/**
+	 * Mode des nouveaux paiements : test (clé test_…) ou live.
+	 */
+	public function mode(): string {
+		return 'yes' === $this->get( 'testmode' ) ? 'test' : 'live';
+	}
+
+	/**
+	 * Clé API du mode demandé.
+	 *
+	 * @param string $mode live ou test.
+	 */
+	public function key_for( string $mode ): string {
+		return 'test' === $mode ? $this->secret( 'test_key' ) : $this->secret( 'api_token' );
+	}
+
+	/**
+	 * Préfixe des références (lettres, chiffres, . _ : -), « WC » par défaut.
+	 */
+	public function reference_prefix(): string {
+		$prefix = (string) preg_replace( '/[^A-Za-z0-9._:\-]/', '', $this->get( 'reference_prefix' ) );
+
+		return '' === $prefix ? 'WC' : substr( $prefix, 0, 20 );
+	}
+
+	/**
+	 * Journal détaillé activé.
+	 */
+	public function debug(): bool {
+		return 'yes' === $this->get( 'debug' );
+	}
+}
