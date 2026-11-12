@@ -106,3 +106,110 @@ final class Webhook
         if ($timestamp === null || $signatures === []) {
             throw new SignatureVerificationException('Missing or malformed X-Labyrinthe-Signature header (expected "t=<timestamp>,v1=<signature>").');
         }
+
+        $valid = false;
+        foreach ($secrets as $candidate) {
+            $expected = self::computeSignature($timestamp, $rawBody, $candidate);
+            foreach ($signatures as $signature) {
+                // No early exit: every comparison runs in constant time.
+                $valid = hash_equals($expected, $signature) || $valid;
+            }
+        }
+        if (!$valid) {
+            throw new SignatureVerificationException('Invalid notification signature: the body was not signed with this secret.');
+        }
+
+        if ($toleranceSeconds > 0 && abs(($now ?? time()) - $timestamp) > $toleranceSeconds) {
+            throw new SignatureVerificationException(\sprintf('Notification timestamp is outside the %d s tolerance (possible replay).', $toleranceSeconds));
+        }
+
+        return $timestamp;
+    }
+
+    /**
+     * True when the signature and timestamp are valid.
+     *
+     * @param string|list<string> $secret
+     */
+    public static function isValid(
+        string $rawBody,
+        string $signatureHeader,
+        #[\SensitiveParameter]
+        string|array $secret,
+        int $toleranceSeconds = self::DEFAULT_TOLERANCE,
+        ?int $now = null,
+    ): bool {
+        try {
+            self::verify($rawBody, $signatureHeader, $secret, $toleranceSeconds, $now);
+
+            return true;
+        } catch (SignatureVerificationException) {
+            return false;
+        }
+    }
+
+    /**
+     * The X-Labyrinthe-Signature value LabPay would send for this body:
+     * useful to test your notification endpoint.
+     *
+     * @param string|list<string> $secret one v1 per secret
+     */
+    public static function sign(string $rawBody, #[\SensitiveParameter] string|array $secret, ?int $timestamp = null): string
+    {
+        $timestamp ??= time();
+        $parts = ['t='.$timestamp];
+        foreach (self::secrets($secret) as $candidate) {
+            $parts[] = 'v1='.self::computeSignature($timestamp, $rawBody, $candidate);
+        }
+
+        return implode(',', $parts);
+    }
+
+    /**
+     * @return array{0: int|null, 1: list<string>}
+     */
+    private static function parseHeader(string $header): array
+    {
+        $timestamp = null;
+        $signatures = [];
+        foreach (explode(',', $header) as $part) {
+            $pair = explode('=', trim($part), 2);
+            if (\count($pair) !== 2) {
+                continue;
+            }
+            [$key, $value] = $pair;
+            if ($key === 't' && preg_match('/^\d{1,12}$/', $value) === 1) {
+                $timestamp = (int) $value;
+            } elseif ($key === 'v1' && preg_match('/^[0-9a-f]{64}$/', strtolower($value)) === 1) {
+                $signatures[] = strtolower($value);
+            }
+        }
+
+        return [$timestamp, $signatures];
+    }
+
+    /**
+     * @param string|array<mixed> $secret
+     *
+     * @return list<string>
+     */
+    private static function secrets(#[\SensitiveParameter] string|array $secret): array
+    {
+        $secrets = [];
+        foreach (\is_array($secret) ? $secret : [$secret] as $candidate) {
+            if (\is_string($candidate) && $candidate !== '') {
+                $secrets[] = $candidate;
+            }
+        }
+        if ($secrets === []) {
+            throw new InvalidArgumentException('The webhook signing secret cannot be empty (whsec_…, GET /V2/account with the live token).');
+        }
+
+        return $secrets;
+    }
+
+    private static function computeSignature(int $timestamp, string $rawBody, #[\SensitiveParameter] string $secret): string
+    {
+        return hash_hmac('sha256', $timestamp.'.'.$rawBody, $secret);
+    }
+}
