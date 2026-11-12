@@ -1,0 +1,41 @@
+<Project>
+  <!-- Réglages communs à tous les projets du SDK .NET LabPay (bibliothèques, tests, exemples). -->
+  <PropertyGroup>
+    <!-- Version du package : à garder égale à LabPayClient.Version (vérifié par les tests). -->
+    <Version>0.1.0</Version>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Deterministic>true</Deterministic>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+
+    <Authors>Labyrinthe Innovations SARL</Authors>
+    <Company>Labyrinthe Innovations SARL</Company>
+    <Copyright>Copyright (c) 2026 Labyrinthe Innovations SARL</Copyright>
+    <PackageProjectUrl>https://pay.labyrinthe-rdc.com</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Tests et exemples : fichier de documentation généré pour que IDE0005 (usings inutiles) soit appliqué au
+       build, sans exiger de commentaires XML (CS1591). src/* garde CS1591. -->
+  <PropertyGroup Condition="!$([System.String]::Copy('$(MSBuildProjectDirectory)').Replace('\', '/').Contains('/src/'))">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!-- Builds reproductibles en CI (GitHub Actions). Hors dépôt git, SourceLink est désactivé. -->
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' != 'true'">
+    <EnableSourceLink>false</EnableSourceLink>
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+  </PropertyGroup>
+</Project>
