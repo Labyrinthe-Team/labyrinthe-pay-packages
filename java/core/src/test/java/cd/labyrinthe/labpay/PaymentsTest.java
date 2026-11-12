@@ -179,3 +179,183 @@ class PaymentsTest {
 
     assertEquals(
         "{\"payment_id\":\"DEP-1\",\"amount\":\"300\",\"reference\":\"REFUND-42-1\"}",
+        api.last().body);
+    assertEquals("DEP-1", refund.refundedPaymentId());
+    assertEquals(Operation.REFUND, refund.operation());
+  }
+
+  @Test
+  void getsSyncsAndCancels() {
+    api.enqueue(
+        data(
+            200,
+            payment(
+                "id", "\"PAY-1\"", "operation", "\"payout\"", "gateway_status", "\"ENQUEUED\"")),
+        data(200, payment("id", "\"PAY-1\"", "operation", "\"payout\"")),
+        data(
+            200,
+            payment("status", "\"completed\"", "completed_at", "\"2026-11-11T10:00:42+00:00\"")));
+    LabPayClient labpay = api.client();
+
+    assertTrue(labpay.payments().get("PAY-1").isQueued());
+    assertEquals("GET /api/V2/payments/PAY-1", api.last().method + " " + api.last().path);
+    labpay.payouts().cancel("PAY-1");
+    assertEquals("POST /api/V2/payouts/PAY-1/cancel", api.last().method + " " + api.last().path);
+    Payment synced = labpay.payments().sync("DEP-1");
+    assertEquals("POST /api/V2/payments/DEP-1/sync", api.last().method + " " + api.last().path);
+    assertEquals(Instant.parse("2026-11-11T10:00:42Z"), synced.completedAt());
+    assertTrue(synced.isCompleted());
+  }
+
+  @Test
+  void listsAndIteratesOverPages() {
+    String meta = "\"meta\":{\"current_page\":%d,\"last_page\":2,\"per_page\":1,\"total\":2}";
+    api.enqueue(
+        json(200, "{\"data\":[" + payment() + "],\"links\":{}," + String.format(meta, 1) + "}"),
+        json(
+            200,
+            "{\"data\":["
+                + payment("id", "\"DEP-2\"")
+                + "],\"links\":{},"
+                + String.format(meta, 2)
+                + "}"));
+    LabPayClient labpay = api.client();
+
+    List<String> ids = new ArrayList<>();
+    for (Payment p :
+        labpay
+            .payments()
+            .iterate(
+                ListPaymentsParams.builder()
+                    .status(PaymentStatus.COMPLETED)
+                    .operation(Operation.DEPOSIT)
+                    .from(LocalDate.of(2026, 11, 1))
+                    .perPage(1)
+                    .build())) {
+      ids.add(p.id());
+    }
+
+    assertEquals(List.of("DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6", "DEP-2"), ids);
+    assertEquals(
+        "status=completed&operation=deposit&from=2026-11-01&per_page=1&page=2",
+        api.last().rawQuery);
+  }
+
+  @Test
+  void streamsWithTheLargestPageByDefault() {
+    api.enqueue(
+        json(
+            200,
+            "{\"data\":["
+                + payment()
+                + "],\"meta\":{\"current_page\":1,\"last_page\":1,\"per_page\":100,\"total\":1}}"));
+    LabPayClient labpay = api.client();
+
+    assertEquals(1, labpay.payments().stream(ListPaymentsParams.none()).count());
+    assertEquals("per_page=100&page=1", api.last().rawQuery);
+  }
+
+  @Test
+  void findsByReference() {
+    api.enqueue(
+        json(
+            200,
+            "{\"data\":[],\"meta\":{\"current_page\":1,\"last_page\":1,\"per_page\":1,\"total\":0}}"));
+    LabPayClient labpay = api.client();
+
+    assertTrue(labpay.payments().findByReference("ORDER-404").isEmpty());
+    assertEquals("reference=ORDER-404&per_page=1", api.last().rawQuery);
+  }
+
+  @Test
+  void readsAPageWithoutMeta() {
+    api.enqueue(json(200, "{\"data\":[" + payment() + "]}"));
+    Page<Payment> page = api.client().payments().list();
+    assertEquals(1, page.currentPage());
+    assertEquals(1, page.total());
+    assertFalse(page.hasMore());
+    assertNull(page.data().get(0).completedAt());
+  }
+
+  static Stream<Arguments> invalidCalls() {
+    return Stream.of(
+        Arguments.of(
+            "zero amount",
+            (Consumer<LabPayClient>)
+                l -> l.deposits().create(MobileMoneyParams.of("0", "CDF", "0813456789"))),
+        Arguments.of(
+            "three decimals",
+            (Consumer<LabPayClient>)
+                l ->
+                    l.deposits()
+                        .create(
+                            MobileMoneyParams.builder()
+                                .amount(new BigDecimal("1.234"))
+                                .currency("CDF")
+                                .phone("0813456789")
+                                .build())),
+        Arguments.of(
+            "bad currency",
+            (Consumer<LabPayClient>)
+                l -> l.deposits().create(MobileMoneyParams.of("10", "FC", "0813456789"))),
+        Arguments.of(
+            "bad reference",
+            (Consumer<LabPayClient>)
+                l ->
+                    l.deposits()
+                        .create(
+                            MobileMoneyParams.builder()
+                                .amount("10")
+                                .currency("CDF")
+                                .phone("0813456789")
+                                .reference("order 42")
+                                .build())),
+        Arguments.of(
+            "http callback",
+            (Consumer<LabPayClient>)
+                l ->
+                    l.deposits()
+                        .create(
+                            MobileMoneyParams.builder()
+                                .amount("10")
+                                .currency("CDF")
+                                .phone("0813456789")
+                                .callbackUrl("http://example.test")
+                                .build())),
+        Arguments.of(
+            "short message",
+            (Consumer<LabPayClient>)
+                l ->
+                    l.deposits()
+                        .create(
+                            MobileMoneyParams.builder()
+                                .amount("10")
+                                .currency("CDF")
+                                .phone("0813456789")
+                                .customerMessage("Hi")
+                                .build())),
+        Arguments.of(
+            "per page",
+            (Consumer<LabPayClient>)
+                l -> l.payments().list(ListPaymentsParams.builder().perPage(101).build())),
+        Arguments.of(
+            "dates in the wrong order",
+            (Consumer<LabPayClient>)
+                l ->
+                    l.payments()
+                        .list(
+                            ListPaymentsParams.builder()
+                                .from(LocalDate.of(2026, 11, 2))
+                                .to(LocalDate.of(2026, 11, 1))
+                                .build())),
+        Arguments.of("notification id", (Consumer<LabPayClient>) l -> l.notifications().resend(0)));
+  }
+
+  @ParameterizedTest(name = "rejects {0} before any request")
+  @MethodSource("invalidCalls")
+  void rejectsInvalidInputBeforeAnyRequest(String name, Consumer<LabPayClient> call) {
+    LabPayClient labpay = api.client();
+    assertThrows(InvalidArgumentException.class, () -> call.accept(labpay), name);
+    assertEquals(0, api.requests.size());
+  }
+}
