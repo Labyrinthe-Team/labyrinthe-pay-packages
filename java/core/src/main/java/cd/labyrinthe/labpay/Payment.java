@@ -91,3 +91,96 @@ public record Payment(
         Data.nullableString(data, "phone"),
         Data.nullableString(data, "provider"),
         Data.nullableString(data, "provider_transaction_id"),
+        failure,
+        Data.nullableStringMap(data, "metadata"),
+        Data.nullableInstant(data, "created_at"),
+        Data.nullableInstant(data, "completed_at"),
+        Data.nullableString(data, "refunded_amount"),
+        Data.nullableString(data, "refunded_payment_id"),
+        data);
+  }
+
+  /**
+   * Waiting for the customer or the provider.
+   *
+   * @return true when {@code pending}
+   */
+  public boolean isPending() {
+    return status == PaymentStatus.PENDING;
+  }
+
+  /**
+   * Deposit: your balance is credited. Payout / refund: the money has left. Deliver only on this
+   * status.
+   *
+   * @return true when {@code completed}
+   */
+  public boolean isCompleted() {
+    return status == PaymentStatus.COMPLETED;
+  }
+
+  /**
+   * Failed or cancelled; see {@link #failure()}. Payout / refund: your balance is credited back.
+   *
+   * @return true when {@code failed}
+   */
+  public boolean isFailed() {
+    return status == PaymentStatus.FAILED;
+  }
+
+  /**
+   * {@code completed} or {@code failed}: the payment will no longer change.
+   *
+   * @return true when final
+   */
+  public boolean isFinal() {
+    return isCompleted() || isFailed();
+  }
+
+  /**
+   * A payout queued by the provider ({@code gateway_status: ENQUEUED}): it can be cancelled.
+   *
+   * @return true when queued
+   */
+  public boolean isQueued() {
+    return isPending() && "ENQUEUED".equals(gatewayStatus);
+  }
+
+  /**
+   * A sandbox payment (test key).
+   *
+   * @return true when {@code livemode} is false
+   */
+  public boolean isTest() {
+    return !livemode;
+  }
+
+  /**
+   * The amount as an exact decimal.
+   *
+   * @return e.g. {@code 1500.00}
+   */
+  public BigDecimal amountValue() {
+    return new BigDecimal(amount);
+  }
+
+  /** The phone number and the metadata are not shown. */
+  @Override
+  public String toString() {
+    return "Payment(id="
+        + id
+        + ", reference="
+        + reference
+        + ", operation="
+        + operation
+        + ", status="
+        + status
+        + ", amount="
+        + amount
+        + " "
+        + currency
+        + ", livemode="
+        + livemode
+        + ")";
+  }
+}
