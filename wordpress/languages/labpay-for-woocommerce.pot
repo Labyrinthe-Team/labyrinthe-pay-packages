@@ -1,0 +1,213 @@
+# Copyright (C) 2026 Labyrinthe Innovations SARL. This file is distributed under the GPL-2.0-or-later license.
+msgid ""
+msgstr ""
+"Project-Id-Version: LabPay for WooCommerce 0.1.0\n"
+"Report-Msgid-Bugs-To: contact@labyrinthe-rdc.com\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-11-12T18:51:41+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: labpay-for-woocommerce\n"
+
+#. Plugin Name of the plugin
+#: labpay-for-woocommerce.php:3
+msgid "LabPay for WooCommerce"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: labpay-for-woocommerce.php:4
+msgid "https://docs.pay.labyrinthe-rdc.com"
+msgstr ""
+
+#. Description of the plugin
+#: labpay-for-woocommerce.php:5
+msgid "Mobile Money payments for WooCommerce with LabPay: M-Pesa, Airtel Money and Orange Money in the DR Congo (CDF and USD)."
+msgstr ""
+
+#. Author of the plugin
+#: labpay-for-woocommerce.php:10
+msgid "Labyrinthe Innovations SARL"
+msgstr ""
+
+#. Author URI of the plugin
+#: labpay-for-woocommerce.php:11
+msgid "https://pay.labyrinthe-rdc.com"
+msgstr ""
+
+#: includes/class-ajax.php:93
+msgid "Order not found."
+msgstr ""
+
+#: includes/class-ajax.php:237
+msgid "Payment received. Thank you!"
+msgstr ""
+
+#: includes/class-ajax.php:239
+msgid "Payment received: the shop is checking it."
+msgstr ""
+
+#: includes/class-ajax.php:241
+msgid "The payment did not go through (refused, cancelled or expired). You have not been charged."
+msgstr ""
+
+#: includes/class-ajax.php:243
+msgid "Confirm the payment on your phone: enter your Mobile Money PIN when asked."
+msgstr ""
+
+#: includes/class-client-factory.php:53
+msgid "No LabPay test key is configured."
+msgstr ""
+
+#: includes/class-client-factory.php:54
+msgid "No LabPay API token is configured."
+msgstr ""
+
+#: includes/class-gateway.php:30
+msgid "LabPay (Mobile Money)"
+msgstr ""
+
+#: includes/class-gateway.php:31
+msgid "M-Pesa, Airtel Money and Orange Money payments in the DR Congo with LabPay. The customer confirms the payment on their phone with their PIN."
+msgstr ""
+
+#: includes/class-gateway.php:41
+#: includes/class-gateway.php:69
+msgid "Mobile Money (M-Pesa, Airtel Money, Orange Money)"
+msgstr ""
+
+#: includes/class-gateway.php:60
+msgid "Enable"
+msgstr ""
+
+#: includes/class-gateway.php:62
+msgid "Accept Mobile Money payments with LabPay"
+msgstr ""
+
+#: includes/class-gateway.php:66
+msgid "Title"
+msgstr ""
+
+#: includes/class-gateway.php:68
+msgid "Name of the payment method shown at checkout."
+msgstr ""
+
+#: includes/class-gateway.php:73
+msgid "Description"
+msgstr ""
+
+#: includes/class-gateway.php:75
+msgid "Text shown under the payment method at checkout."
+msgstr ""
+
+#: includes/class-gateway.php:76
+msgid "Pay with your Mobile Money account: you will receive a confirmation request (PIN) on your phone."
+msgstr ""
+
+#: includes/class-gateway.php:80
+msgid "API keys"
+msgstr ""
+
+#: includes/class-gateway.php:82
+msgid "Find your token, your test key and your signing secret in your LabPay merchant area (Developers). They are stored encrypted and never shown again."
+msgstr ""
+
+#: includes/class-gateway.php:85
+msgid "Test mode"
+msgstr ""
+
+#: includes/class-gateway.php:87
+msgid "Use the test key (sandbox: no real money moves)"
+msgstr ""
+
+#: includes/class-gateway.php:89
+msgid "Orders paid in test mode are marked \"test mode\" in their notes. Uncheck when your account is activated for production."
+msgstr ""
+
+#: includes/class-gateway.php:92
+msgid "API token (live)"
+msgstr ""
+
+#: includes/class-gateway.php:94
+msgid "Production token. Leave unchanged to keep the saved value; empty the field to remove it."
+msgstr ""
+
+#: includes/class-gateway.php:99
+msgid "Test key"
+msgstr ""
+
+#: includes/class-gateway.php:101
+msgid "Starts with test_. Used when test mode is enabled."
+msgstr ""
+
+#: includes/class-gateway.php:106
+msgid "Signing secret"
+msgstr ""
+
+#. translators: %s: webhook URL.
+#: includes/class-gateway.php:110
+#, php-format
+msgid "whsec_… secret used to check the notifications sent by LabPay to %s (sent automatically with each payment when your site uses HTTPS)."
+msgstr ""
+
+#: includes/class-gateway.php:117
+msgid "Advanced"
+msgstr ""
+
+#: includes/class-gateway.php:121
+msgid "Reference prefix"
+msgstr ""
+
+#: includes/class-gateway.php:123
+msgid "LabPay references are \"<prefix>-<order ID>-<attempt>\". Change it if several shops share the same LabPay token (letters, digits, . _ : -)."
+msgstr ""
+
+#: includes/class-gateway.php:128
+msgid "Debug log"
+msgstr ""
+
+#: includes/class-gateway.php:130
+msgid "Log every LabPay request (WooCommerce > Status > Logs, source \"labpay\")"
+msgstr ""
+
+#: includes/class-gateway.php:132
+msgid "Errors are always logged. Keys, secrets and signatures are never logged; phone numbers are masked."
+msgstr ""
+
+#. translators: %s: setting name.
+#: includes/class-gateway.php:146
+#, php-format
+msgid "%s can no longer be read (the WordPress salts of wp-config.php changed): enter it again."
+msgstr ""
+
+#: includes/class-gateway.php:151
+msgid "Test mode is enabled but no test key is saved: the payment method is hidden at checkout."
+msgstr ""
+
+#: includes/class-gateway.php:152
+msgid "No live API token is saved: the payment method is hidden at checkout."
+msgstr ""
+
+#. translators: %s: shop currency code.
+#: includes/class-gateway.php:156
+#, php-format
+msgid "LabPay accepts CDF and USD only; the shop currency is %s: the payment method is hidden at checkout."
+msgstr ""
+
+#: includes/class-gateway.php:159
+msgid "No signing secret: LabPay notifications are refused, statuses are only updated by the waiting page."
+msgstr ""
+
+#: includes/class-gateway.php:162
+msgid "Your site does not use HTTPS: LabPay cannot send it notifications, statuses are only updated by the waiting page."
+msgstr ""
+
+#: includes/class-gateway.php:205
+#: assets/js/blocks.js:97
+msgid "Test mode: no real money moves."
+msgstr ""
+
+#: includes/class-gateway.php:220
