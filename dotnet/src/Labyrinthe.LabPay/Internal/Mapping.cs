@@ -121,3 +121,126 @@ internal static class Mapping
     {
         var reader = Json.Api;
         var data = reader.Object(value, "country");
+        var limits = new Dictionary<string, AmountLimits>(StringComparer.Ordinal);
+        foreach (var limit in reader.OptionalObject(data, "limits").EnumerateObject())
+        {
+            limits[limit.Name] = ToLimits(limit.Value);
+        }
+
+        var currencies = new List<string>();
+        if (Json.Field(data, "currencies") is { ValueKind: JsonValueKind.Array } list)
+        {
+            foreach (var item in list.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String && item.GetString() is { } currency)
+                {
+                    currencies.Add(currency);
+                }
+            }
+        }
+
+        return new Country
+        {
+            Code = reader.String(data, "country"),
+            Name = reader.NullableString(data, "name"),
+            DialCode = reader.NullableString(data, "dial_code"),
+            Currencies = currencies,
+            Limits = limits,
+            IsDefault = Json.Bool(data, "default", false),
+        };
+    }
+
+    public static Provider ToProvider(JsonElement value)
+    {
+        var reader = Json.Api;
+        var data = reader.Object(value, "provider");
+        var currencies = new Dictionary<string, ProviderCurrency>(StringComparer.Ordinal);
+        foreach (var entry in reader.OptionalObject(data, "currencies").EnumerateObject())
+        {
+            var rules = Json.Lenient(entry.Value);
+            currencies[entry.Name] = new ProviderCurrency
+            {
+                MinAmount = reader.NullableString(rules, "min_amount"),
+                MaxAmount = reader.NullableString(rules, "max_amount"),
+                AmountDecimals = reader.NullableString(rules, "decimals"),
+                Status = reader.NullableString(rules, "status"),
+                PinPrompt = Json.Raw(rules, "pin_prompt"),
+                PinPromptRevivable = Json.Raw(rules, "pin_prompt_revivable"),
+                PinPromptInstructions = Json.Raw(rules, "pin_prompt_instructions"),
+            };
+        }
+
+        return new Provider
+        {
+            Code = reader.String(data, "provider"),
+            Country = reader.NullableString(data, "country"),
+            Name = reader.NullableString(data, "name"),
+            NameDisplayedToCustomer = reader.NullableString(data, "name_displayed_to_customer"),
+            Logo = reader.NullableString(data, "logo"),
+            Currencies = currencies,
+        };
+    }
+
+    public static ProviderAvailability ToAvailability(string provider, JsonElement value)
+    {
+        var data = Json.Lenient(value);
+        var statuses = new Dictionary<string, string?>(StringComparer.Ordinal);
+        foreach (var entry in data.EnumerateObject())
+        {
+            if (entry.Name != "country")
+            {
+                statuses[entry.Name] = entry.Value.ValueKind == JsonValueKind.String ? entry.Value.GetString() : null;
+            }
+        }
+
+        return new ProviderAvailability
+        {
+            Provider = provider,
+            Country = Json.Api.NullableString(data, "country"),
+            Statuses = statuses,
+        };
+    }
+
+    public static ProviderPrediction ToPrediction(JsonElement value)
+    {
+        var reader = Json.Api;
+        var data = reader.Object(value, "data");
+        return new ProviderPrediction
+        {
+            Phone = reader.String(data, "phone"),
+            Provider = reader.String(data, "provider"),
+            Country = reader.String(data, "country"),
+        };
+    }
+
+    public static Notification ToNotification(JsonElement value)
+    {
+        var reader = Json.Api;
+        var data = reader.Object(value, "notification");
+        var id = Json.NullableLong(data, "id") ?? throw reader.Invalid("id", "an integer");
+        return new Notification
+        {
+            Id = id,
+            EventName = reader.NullableString(data, "event") ?? "unknown",
+            PaymentId = reader.NullableString(data, "payment_id"),
+            Url = reader.NullableString(data, "url"),
+            Status = ApiValues.ParseNotificationStatus(reader.NullableString(data, "status")),
+            Attempts = Json.NullableInt(data, "attempts") ?? 0,
+            LastStatusCode = Json.NullableInt(data, "last_status_code"),
+            LastError = reader.NullableString(data, "last_error"),
+            NextAttemptAt = Json.NullableDate(data, "next_attempt_at"),
+            DeliveredAt = Json.NullableDate(data, "delivered_at"),
+            CreatedAt = Json.NullableDate(data, "created_at"),
+        };
+    }
+
+    private static AmountLimits ToLimits(JsonElement value)
+    {
+        var data = Json.Lenient(value);
+        return new AmountLimits
+        {
+            MinAmount = Json.Api.NullableString(data, "min_amount"),
+            MaxAmount = Json.Api.NullableString(data, "max_amount"),
+        };
+    }
+}
