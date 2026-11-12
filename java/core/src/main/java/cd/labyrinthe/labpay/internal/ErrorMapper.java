@@ -96,3 +96,100 @@ public final class ErrorMapper {
     putAll(map, DailyLimitReachedException::new, "DAILY_LIMIT_REACHED");
     putAll(
         map,
+        ServiceUnavailableException::new,
+        "MAINTENANCE",
+        "API_DISABLED",
+        "DEPOSITS_DISABLED",
+        "WITHDRAWALS_DISABLED",
+        "PROVIDER_TEMPORARILY_UNAVAILABLE",
+        "GATEWAY_UNAVAILABLE",
+        "V2_DISABLED",
+        "TEST_MODE_DISABLED");
+    return Collections.unmodifiableMap(map);
+  }
+
+  private static Factory forStatus(int status) {
+    if (status == 401) {
+      return AuthenticationException::new;
+    }
+    if (status == 403) {
+      return PermissionException::new;
+    }
+    if (status == 404) {
+      return NotFoundException::new;
+    }
+    if (status == 409) {
+      return ConflictException::new;
+    }
+    if (status == 422) {
+      return InvalidRequestException::new;
+    }
+    if (status == 429) {
+      return RateLimitException::new;
+    }
+    if (status >= 500) {
+      return ServiceUnavailableException::new;
+    }
+    return ApiException::new;
+  }
+
+  /**
+   * Codes de l'API qui ont une exception dédiée (test de contrat).
+   *
+   * @return les codes
+   */
+  public static Set<String> knownCodes() {
+    return BY_CODE.keySet();
+  }
+
+  /**
+   * L'exception correspondant à une réponse d'erreur.
+   *
+   * @param status statut HTTP
+   * @param body corps décodé (ou null s'il n'est pas du JSON)
+   * @param headers en-têtes (noms en minuscules)
+   * @return l'exception (à lever)
+   */
+  public static ApiException fromResponse(int status, Object body, Map<String, String> headers) {
+    Map<String, Object> object = Data.lenientObject(body);
+    Map<String, List<String>> errors = fieldErrors(object.get("errors"));
+    Object rawCode = object.get("code");
+    String code =
+        rawCode instanceof String && !((String) rawCode).isEmpty() ? (String) rawCode : null;
+    if (code == null) {
+      if (status == 429) {
+        code = TOO_MANY_REQUESTS;
+      } else if (status == 422 && !errors.isEmpty()) {
+        code = "VALIDATION_ERROR";
+      } else {
+        code = HTTP_ERROR;
+      }
+    }
+    Object rawMessage = object.get("message");
+    String message =
+        rawMessage instanceof String && !((String) rawMessage).isEmpty()
+            ? (String) rawMessage
+            : "The LabPay API returned HTTP " + status + ".";
+    Factory factory = BY_CODE.getOrDefault(code, forStatus(status));
+    return factory.create(message, code, status, errors, headers);
+  }
+
+  private static Map<String, List<String>> fieldErrors(Object value) {
+    if (!(value instanceof Map)) {
+      return Collections.emptyMap();
+    }
+    Map<String, List<String>> result = new LinkedHashMap<>();
+    for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+      List<String> messages = new ArrayList<>();
+      Object item = entry.getValue();
+      List<?> list = item instanceof List ? (List<?>) item : Collections.singletonList(item);
+      for (Object message : list) {
+        if (message instanceof String) {
+          messages.add((String) message);
+        }
+      }
+      result.put(String.valueOf(entry.getKey()), messages);
+    }
+    return result;
+  }
+}
