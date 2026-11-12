@@ -80,3 +80,85 @@ public final class PaymentService extends Resource {
     return Page.fromJson(response.body(), Payment::fromJson);
   }
 
+  /**
+   * The first page of every payment.
+   *
+   * @return one page
+   */
+  public Page<Payment> list() {
+    return list(ListPaymentsParams.none());
+  }
+
+  /**
+   * Every payment matching the filters, fetching the next pages (100 per request by default) as you
+   * iterate. Each iteration starts again from the first page.
+   *
+   * @param params filters ({@code page} is ignored)
+   * @return a lazy iterable
+   */
+  public Iterable<Payment> iterate(ListPaymentsParams params) {
+    ListPaymentsParams p = params == null ? ListPaymentsParams.none() : params;
+    ListPaymentsParams.Builder base = p.toBuilder().page(null);
+    if (p.perPage() == null) {
+      base.perPage(Input.MAX_PER_PAGE);
+    }
+    ListPaymentsParams filters = base.build();
+    return () -> new PageIterator(filters);
+  }
+
+  /**
+   * Every payment matching the filters, as a lazy stream.
+   *
+   * @param params filters ({@code page} is ignored)
+   * @return a sequential stream
+   */
+  public Stream<Payment> stream(ListPaymentsParams params) {
+    return StreamSupport.stream(
+        Spliterators.spliteratorUnknownSize(iterate(params).iterator(), Spliterator.ORDERED),
+        false);
+  }
+
+  /**
+   * The payment carrying your reference (references are unique per token and mode).
+   *
+   * @param reference your reference
+   * @return the payment, or empty
+   */
+  public Optional<Payment> findByReference(String reference) {
+    if (reference == null) {
+      throw new InvalidArgumentException("reference is required.");
+    }
+    Page<Payment> page =
+        list(ListPaymentsParams.builder().reference(Input.reference(reference)).perPage(1).build());
+    return page.data().stream().findFirst();
+  }
+
+  /** Itérateur paresseux sur toutes les pages. */
+  private final class PageIterator implements Iterator<Payment> {
+    private final ListPaymentsParams filters;
+    private Iterator<Payment> current = java.util.Collections.emptyIterator();
+    private Integer nextPage = 1;
+
+    PageIterator(ListPaymentsParams filters) {
+      this.filters = filters;
+    }
+
+    @Override
+    public boolean hasNext() {
+      while (!current.hasNext() && nextPage != null) {
+        Page<Payment> page = list(filters.toBuilder().page(nextPage).build());
+        current = page.data().iterator();
+        nextPage = page.hasMore() ? page.currentPage() + 1 : null;
+      }
+      return current.hasNext();
+    }
+
+    @Override
+    public Payment next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      return current.next();
+    }
+  }
+}
