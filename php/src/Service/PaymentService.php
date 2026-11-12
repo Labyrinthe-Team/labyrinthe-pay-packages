@@ -68,3 +68,72 @@ final class PaymentService
      *
      * @throws InvalidArgumentException
      * @throws ApiException
+     * @throws ConnectionException
+     */
+    public function list(
+        PaymentStatus|string|null $status = null,
+        Operation|string|null $operation = null,
+        ?string $currency = null,
+        ?string $country = null,
+        ?string $reference = null,
+        \DateTimeInterface|string|null $from = null,
+        \DateTimeInterface|string|null $to = null,
+        ?int $perPage = null,
+        ?int $page = null,
+    ): Page {
+        $query = [
+            'status' => Input::status($status),
+            'operation' => Input::operation($operation),
+            'currency' => $currency === null ? null : Input::currency($currency),
+            'country' => Input::country($country),
+            'reference' => $reference,
+            'from' => Input::date($from, 'from'),
+            'to' => Input::date($to, 'to'),
+            'per_page' => Input::perPage($perPage),
+            'page' => Input::page($page),
+        ];
+        $response = $this->transport->request('GET', '/payments', RetryMode::Safe, query: $query);
+
+        return Page::fromResponse($response->body, Payment::fromArray(...));
+    }
+
+    /**
+     * Every payment matching the filters, fetching the next pages as you iterate.
+     *
+     * @return \Generator<int, Payment>
+     *
+     * @throws InvalidArgumentException
+     * @throws ApiException
+     * @throws ConnectionException
+     */
+    public function iterate(
+        PaymentStatus|string|null $status = null,
+        Operation|string|null $operation = null,
+        ?string $currency = null,
+        ?string $country = null,
+        ?string $reference = null,
+        \DateTimeInterface|string|null $from = null,
+        \DateTimeInterface|string|null $to = null,
+        int $perPage = Input::MAX_PER_PAGE,
+    ): \Generator {
+        $page = 1;
+        do {
+            $result = $this->list($status, $operation, $currency, $country, $reference, $from, $to, $perPage, $page);
+            foreach ($result->items as $payment) {
+                yield $payment;
+            }
+            $page = $result->nextPage();
+        } while ($page !== null);
+    }
+
+    /**
+     * The payment carrying your reference, or null (references are unique per token and mode).
+     *
+     * @throws ApiException
+     * @throws ConnectionException
+     */
+    public function findByReference(string $reference): ?Payment
+    {
+        return $this->list(reference: Input::reference($reference), perPage: 1)->items[0] ?? null;
+    }
+}
