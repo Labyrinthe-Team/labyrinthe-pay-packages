@@ -125,3 +125,129 @@ final class WebhookTest extends TestCase {
 						'message' => null,
 					),
 				)
+			),
+			null,
+			'payment.failed'
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$order = wc_get_order( $order->get_id() );
+		$this->assertTrue( $order->has_status( 'failed' ) );
+		$this->assertSame( 'failed', $order->get_meta( Order_Payments::META_STATUS ) );
+		$this->assertStringContainsString( 'PAYER_DECLINED', implode( "\n", self::notes( $order ) ) );
+	}
+
+	public function test_amount_mismatch_puts_the_order_on_hold(): void {
+		$this->configure();
+		$order = $this->order_with_deposit();
+
+		$this->deliver(
+			self::payment_of(
+				$order,
+				array(
+					'status' => 'completed',
+					'amount' => '15.00',
+				)
+			)
+		);
+
+		$order = wc_get_order( $order->get_id() );
+		$this->assertTrue( $order->has_status( 'on-hold' ) );
+		$this->assertFalse( $order->is_paid() );
+	}
+
+	public function test_unknown_order_or_payment_is_acknowledged_and_ignored(): void {
+		$this->configure();
+		$order = $this->order_with_deposit();
+
+		$unknown = $this->deliver(
+			self::api_payment(
+				array(
+					'status'    => 'completed',
+					'reference' => 'OTHER-1',
+				)
+			)
+		);
+		$this->assertSame( 200, $unknown->get_status() );
+		$this->assertSame( 'ignored', $unknown->get_data()['result'] );
+
+		// Paiement d'une autre commande, qui prétend être celle-ci.
+		$foreign = $this->deliver(
+			self::payment_of(
+				$order,
+				array(
+					'id'     => 'DEP-FOREIGN',
+					'status' => 'completed',
+				)
+			)
+		);
+		$this->assertSame( 'ignored', $foreign->get_data()['result'] );
+		$this->assertFalse( wc_get_order( $order->get_id() )->is_paid() );
+	}
+
+	public function test_old_attempt_completing_late_still_pays_the_order(): void {
+		$this->configure();
+		$order = $this->order_with_deposit( 'DEP-SECOND' );
+		$order->update_meta_data( Order_Payments::META_PAYMENT_IDS, array( 'DEP-FIRST', 'DEP-SECOND' ) );
+		$order->save();
+
+		// La première tentative échoue tard : sans effet (une autre est en cours).
+		$this->deliver(
+			self::payment_of(
+				$order,
+				array(
+					'id'     => 'DEP-FIRST',
+					'status' => 'failed',
+				)
+			),
+			null,
+			'payment.failed'
+		);
+		$this->assertTrue( wc_get_order( $order->get_id() )->has_status( 'pending' ) );
+
+		// La première réussit finalement : l'argent est reçu, la commande est payée.
+		$this->deliver(
+			self::payment_of(
+				$order,
+				array(
+					'id'     => 'DEP-FIRST',
+					'status' => 'completed',
+				)
+			)
+		);
+		$order = wc_get_order( $order->get_id() );
+		$this->assertTrue( $order->is_paid() );
+		$this->assertSame( 'DEP-FIRST', $order->get_transaction_id() );
+
+		// La seconde réussit aussi : note pour rembourser le doublon, une seule fois.
+		$this->deliver(
+			self::payment_of(
+				$order,
+				array(
+					'id'     => 'DEP-SECOND',
+					'status' => 'completed',
+				)
+			)
+		);
+		$this->deliver(
+			self::payment_of(
+				$order,
+				array(
+					'id'     => 'DEP-SECOND',
+					'status' => 'completed',
+				)
+			)
+		);
+		$duplicates = array_filter( self::notes( wc_get_order( $order->get_id() ) ), static fn( string $n ): bool => false !== strpos( $n, 'DEP-SECOND' ) );
+		$this->assertCount( 1, $duplicates );
+	}
+
+	public function test_locked_order_asks_labpay_to_retry_later(): void {
+		$this->configure();
+		$order = $this->order_with_deposit();
+		add_option( 'labpay_wc_lock_' . $order->get_id(), (string) time(), '', false );
+
+		$this->assertSame( 503, $this->deliver( self::payment_of( $order, array( 'status' => 'completed' ) ) )->get_status() );
+		$this->assertFalse( wc_get_order( $order->get_id() )->is_paid() );
+	}
+}
