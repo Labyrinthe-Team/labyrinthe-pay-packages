@@ -162,3 +162,167 @@ public final class MobileMoneyParams {
   }
 
   /** Builder of {@link MobileMoneyParams}. Not thread-safe. */
+  public static final class Builder {
+    private Object amount;
+    private String currency;
+    private String phone;
+    private String country;
+    private String provider;
+    private String reference;
+    private String callbackUrl;
+    private String customerMessage;
+    private Map<String, Object> metadata;
+
+    private Builder() {}
+
+    /**
+     * Net amount: credited to you for a deposit (the customer pays it plus fees), received by the
+     * recipient for a payout. Greater than 0, at most 2 decimals.
+     *
+     * @param amount e.g. {@code "1500"} or {@code "12.50"}
+     * @return this builder
+     */
+    public Builder amount(String amount) {
+      this.amount = amount;
+      return this;
+    }
+
+    /**
+     * Net amount as an exact decimal (at most 2 decimals).
+     *
+     * @param amount e.g. {@code new BigDecimal("12.50")}
+     * @return this builder
+     */
+    public Builder amount(BigDecimal amount) {
+      this.amount = amount;
+      return this;
+    }
+
+    /**
+     * Net amount as a whole number.
+     *
+     * @param amount e.g. {@code 1500}
+     * @return this builder
+     */
+    public Builder amount(long amount) {
+      this.amount = BigDecimal.valueOf(amount);
+      return this;
+    }
+
+    /**
+     * Currency.
+     *
+     * @param currency {@code CDF} or {@code USD}
+     * @return this builder
+     */
+    public Builder currency(String currency) {
+      this.currency = currency;
+      return this;
+    }
+
+    /**
+     * Phone number: local ({@code 0812345678}) or international ({@code +243812345678}), at most 20
+     * characters.
+     *
+     * @param phone the number
+     * @return this builder
+     */
+    public Builder phone(String phone) {
+      this.phone = phone;
+      return this;
+    }
+
+    /**
+     * ISO alpha-3 country of the number (default: DR Congo for a local number).
+     *
+     * @param country e.g. {@code COD}
+     * @return this builder
+     */
+    public Builder country(String country) {
+      this.country = country;
+      return this;
+    }
+
+    /**
+     * Provider code (inferred from the number when absent).
+     *
+     * @param provider e.g. {@code VODACOM_MPESA_COD}
+     * @return this builder
+     */
+    public Builder provider(String provider) {
+      this.provider = provider;
+      return this;
+    }
+
+    /**
+     * Your reference, unique per token: 1 to 100 of {@code A-Z a-z 0-9 . _ : -}. Sending the same
+     * reference again returns the existing payment (idempotency). Generated ({@code sdk_<uuid>})
+     * when absent, unless {@code autoReference(false)}.
+     *
+     * @param reference e.g. {@code ORDER-42}
+     * @return this builder
+     */
+    public Builder reference(String reference) {
+      this.reference = reference;
+      return this;
+    }
+
+    /**
+     * Public HTTPS URL receiving the final status notification.
+     *
+     * @param callbackUrl e.g. {@code https://shop.example/webhooks/labpay}
+     * @return this builder
+     */
+    public Builder callbackUrl(String callbackUrl) {
+      this.callbackUrl = callbackUrl;
+      return this;
+    }
+
+    /**
+     * Text shown to the customer: 4 to 22 letters, digits, spaces.
+     *
+     * @param customerMessage e.g. {@code Commande 42}
+     * @return this builder
+     */
+    public Builder customerMessage(String customerMessage) {
+      this.customerMessage = customerMessage;
+      return this;
+    }
+
+    /**
+     * Up to 20 key/value pairs (strings of at most 255 characters; numbers and booleans are
+     * converted), returned as is in the payment and the notifications.
+     *
+     * @param metadata the metadata
+     * @return this builder
+     */
+    public Builder metadata(Map<String, ?> metadata) {
+      this.metadata = metadata == null ? null : new LinkedHashMap<>(metadata);
+      return this;
+    }
+
+    /**
+     * Adds one metadata entry.
+     *
+     * @param key the key
+     * @param value a string, number, boolean or null
+     * @return this builder
+     */
+    public Builder metadata(String key, Object value) {
+      if (this.metadata == null) {
+        this.metadata = new LinkedHashMap<>();
+      }
+      this.metadata.put(key, value);
+      return this;
+    }
+
+    /**
+     * Builds the parameters (they are checked when sent).
+     *
+     * @return the parameters
+     */
+    public MobileMoneyParams build() {
+      return new MobileMoneyParams(this);
+    }
+  }
+}
