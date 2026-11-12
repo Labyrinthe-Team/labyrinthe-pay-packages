@@ -76,3 +76,81 @@ public sealed class LabPayClient : IDisposable
         var auto = options.AutoReference;
         Deposits = new DepositsResource(Transport, auto);
         Payouts = new PayoutsResource(Transport, auto);
+        Refunds = new RefundsResource(Transport, auto);
+        Payments = new PaymentsResource(Transport, auto);
+        Providers = new ProvidersResource(Transport, auto);
+        Account = new AccountResource(Transport, auto);
+        Notifications = new NotificationsResource(Transport, auto);
+    }
+
+    /// <summary>Collect from a customer (<c>POST /V2/deposits</c>).</summary>
+    public DepositsResource Deposits { get; }
+
+    /// <summary>Send money to a wallet, cancel a queued payout.</summary>
+    public PayoutsResource Payouts { get; }
+
+    /// <summary>Refund a deposit.</summary>
+    public RefundsResource Refunds { get; }
+
+    /// <summary>Read, list, find and sync payments.</summary>
+    public PaymentsResource Payments { get; }
+
+    /// <summary>Countries, providers, availability, provider prediction.</summary>
+    public ProvidersResource Providers { get; }
+
+    /// <summary>Account, balances, key and secret rotations.</summary>
+    public AccountResource Account { get; }
+
+    /// <summary>Notification history and resend.</summary>
+    public NotificationsResource Notifications { get; }
+
+    /// <summary>True with a test key (<c>test_…</c>): sandbox, no real money, separate balances.</summary>
+    public bool IsTestMode => apiKey.StartsWith(TestKeyPrefix, StringComparison.Ordinal);
+
+    /// <summary>Base URL of the V2 API, e.g. <c>https://api.labyrinthe-rdc.com/api/V2</c>.</summary>
+    public string BaseUrl { get; }
+
+    /// <summary>Status and headers of the last response received (e.g. its <c>X-Labyrinthe-Mode</c>), or
+    /// <see langword="null"/> before the first one.</summary>
+    public ResponseInfo? LastResponse => Transport.LastResponse;
+
+    internal Transport Transport { get; }
+
+    /// <summary>Closes the HTTP connections (not those of an <see cref="HttpClient"/> you passed).</summary>
+    public void Dispose()
+    {
+        if (!disposed)
+        {
+            disposed = true;
+            if (ownsHttpClient)
+            {
+                httpClient.Dispose();
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public override string ToString() =>
+        $"LabPayClient {{ ApiKey = {Redact.ApiKey(apiKey)}, BaseUrl = {BaseUrl}, IsTestMode = {(IsTestMode ? "true" : "false")} }}";
+
+    private static HttpClient CreateHttpClient()
+    {
+#if NET8_0_OR_GREATER
+        var handler = new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+        };
+#else
+        var handler = new HttpClientHandler
+        {
+            AllowAutoRedirect = false,
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+        };
+#endif
+
+        // Le délai est géré par tentative par le SDK (LabPayClientOptions.Timeout).
+        return new HttpClient(handler, disposeHandler: true) { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
+    }
+}
