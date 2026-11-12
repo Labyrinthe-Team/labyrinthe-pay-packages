@@ -59,3 +59,63 @@ public final class ProviderService extends Resource {
    *
    * @return the providers
    */
+  public List<Provider> list() {
+    return list(null, null);
+  }
+
+  /**
+   * Real-time availability per provider code: {@code OPERATIONAL}, {@code DELAYED} (payouts queued)
+   * or {@code CLOSED}.
+   *
+   * @param country ISO alpha-3 country, or null for every country
+   * @return availability per provider code
+   */
+  public Map<String, ProviderAvailability> availability(String country) {
+    Map<String, Object> query = new LinkedHashMap<>();
+    query.put("country", Input.country(country));
+    Object data =
+        transport.request("GET", "/availability", RetryMode.SAFE, query, null, false).data();
+    Map<String, ProviderAvailability> result = new LinkedHashMap<>();
+    Data.object(data == null ? Collections.emptyMap() : data, "data")
+        .forEach(
+            (provider, statuses) ->
+                result.put(provider, ProviderAvailability.fromJson(provider, statuses)));
+    return Collections.unmodifiableMap(result);
+  }
+
+  /**
+   * Real-time availability of every provider.
+   *
+   * @return availability per provider code
+   */
+  public Map<String, ProviderAvailability> availability() {
+    return availability(null);
+  }
+
+  /**
+   * Validates a number and predicts its provider, without creating a payment.
+   *
+   * @param phone local or international number
+   * @param country ISO alpha-3 country, or null
+   * @return the prediction
+   * @throws cd.labyrinthe.labpay.exception.InvalidPhoneNumberException when the number is not valid
+   */
+  public ProviderPrediction predict(String phone, String country) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("phone", Input.phone(phone));
+    putIfPresent(body, "country", Input.country(country));
+    Object data =
+        transport.request("POST", "/predict-provider", RetryMode.SAFE, null, body, false).data();
+    return ProviderPrediction.fromJson(data);
+  }
+
+  /**
+   * Validates a number of the default country and predicts its provider.
+   *
+   * @param phone local or international number
+   * @return the prediction
+   */
+  public ProviderPrediction predict(String phone) {
+    return predict(phone, null);
+  }
+}
