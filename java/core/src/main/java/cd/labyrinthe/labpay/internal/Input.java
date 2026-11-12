@@ -166,3 +166,171 @@ public final class Input {
   }
 
   /**
+   * URL de notification : HTTPS publique, au plus 2048 caractères.
+   *
+   * @param value URL
+   * @return l'URL, ou null
+   */
+  public static String callbackUrl(String value) {
+    if (value == null || value.trim().isEmpty()) {
+      return null;
+    }
+    String url = value.trim();
+    boolean valid;
+    try {
+      URI uri = new URI(url);
+      valid =
+          "https".equalsIgnoreCase(uri.getScheme())
+              && uri.getHost() != null
+              && !uri.getHost().isEmpty()
+              && url.length() <= 2048;
+    } catch (URISyntaxException e) {
+      valid = false;
+    }
+    if (!valid) {
+      throw new InvalidArgumentException(
+          "callbackUrl must be a public HTTPS URL (at most 2048 characters).");
+    }
+    return url;
+  }
+
+  /**
+   * Métadonnées : au plus 20 entrées, valeurs scalaires d'au plus 255 caractères.
+   *
+   * @param value métadonnées
+   * @return copie avec des valeurs chaîne (ou null), ou null
+   */
+  public static Map<String, String> metadata(Map<String, ?> value) {
+    if (value == null) {
+      return null;
+    }
+    if (value.size() > 20) {
+      throw new InvalidArgumentException("metadata accepts at most 20 entries.");
+    }
+    Map<String, String> result = new LinkedHashMap<>();
+    for (Map.Entry<String, ?> entry : value.entrySet()) {
+      Object item = entry.getValue();
+      if (item == null) {
+        result.put(entry.getKey(), null);
+        continue;
+      }
+      String text;
+      if (item instanceof BigDecimal) {
+        text = ((BigDecimal) item).toPlainString();
+      } else if (item instanceof CharSequence
+          || item instanceof Number
+          || item instanceof Boolean) {
+        text = item.toString();
+      } else {
+        throw new InvalidArgumentException(
+            "metadata[\"" + entry.getKey() + "\"] must be a string.");
+      }
+      if (text.length() > 255) {
+        throw new InvalidArgumentException(
+            "metadata[\"" + entry.getKey() + "\"] must be at most 255 characters.");
+      }
+      result.put(entry.getKey(), text);
+    }
+    return result;
+  }
+
+  /**
+   * Identifiant LabPay (DEP-…, PAY-…, RFD-…).
+   *
+   * @param value identifiant
+   * @param field nom du champ
+   * @return l'identifiant nettoyé (non encodé)
+   */
+  public static String id(String value, String field) {
+    String text = value == null ? "" : value.trim();
+    if (text.isEmpty() || text.length() > 64) {
+      throw new InvalidArgumentException(
+          field + " must be a LabPay identifier, e.g. \"DEP-01JCX…\".");
+    }
+    return text;
+  }
+
+  /**
+   * Segment de chemin encodé (comme {@code encodeURIComponent}).
+   *
+   * @param value identifiant validé
+   * @return le segment encodé
+   */
+  public static String pathSegment(String value) {
+    return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
+  }
+
+  /**
+   * Taille de page : 1 à 100.
+   *
+   * @param value taille
+   * @return la taille, ou null
+   */
+  public static Integer perPage(Integer value) {
+    if (value != null && (value < 1 || value > MAX_PER_PAGE)) {
+      throw new InvalidArgumentException(
+          "perPage must be an integer between 1 and " + MAX_PER_PAGE + ".");
+    }
+    return value;
+  }
+
+  /**
+   * Numéro de page : 1 ou plus.
+   *
+   * @param value page
+   * @return la page, ou null
+   */
+  public static Integer page(Integer value) {
+    if (value != null && value < 1) {
+      throw new InvalidArgumentException("page must be an integer, 1 or more.");
+    }
+    return value;
+  }
+
+  /**
+   * Date {@code YYYY-MM-DD}.
+   *
+   * @param value date
+   * @param field nom du champ
+   * @return la date, ou null
+   */
+  public static String date(LocalDate value, String field) {
+    return value == null ? null : value.toString();
+  }
+
+  /**
+   * Date {@code YYYY-MM-DD} donnée en texte.
+   *
+   * @param value date
+   * @param field nom du champ
+   * @return la date, ou null
+   */
+  public static String date(String value, String field) {
+    if (value == null) {
+      return null;
+    }
+    if (!DATE.matcher(value).matches()) {
+      throw new InvalidArgumentException(field + " must be a date in YYYY-MM-DD format.");
+    }
+    return value;
+  }
+
+  /**
+   * Valeur parmi une liste.
+   *
+   * @param value valeur
+   * @param allowed valeurs acceptées
+   * @param field nom du champ
+   * @return la valeur, ou null
+   */
+  public static String oneOf(String value, Collection<String> allowed, String field) {
+    if (value == null) {
+      return null;
+    }
+    if (!allowed.contains(value)) {
+      throw new InvalidArgumentException(
+          field + " must be one of: " + String.join(", ", allowed) + ".");
+    }
+    return value;
+  }
+}
