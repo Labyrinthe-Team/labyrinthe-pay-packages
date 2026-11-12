@@ -106,3 +106,110 @@ internal static class Input
             throw new InvalidArgumentException("reference must be 1 to 100 characters among A-Z a-z 0-9 . _ : -");
         }
 
+        return value;
+    }
+
+    public static string? CustomerMessageOrNull(string? value)
+    {
+        if (value is null || value.Length == 0)
+        {
+            return null;
+        }
+
+        if (!CustomerMessage.IsMatch(value))
+        {
+            throw new InvalidArgumentException("customerMessage must be 4 to 22 characters (letters, digits, spaces).");
+        }
+
+        return value;
+    }
+
+    public static string? CallbackUrl(string? value)
+    {
+        if (value is null || value.Trim().Length == 0)
+        {
+            return null;
+        }
+
+        var url = value.Trim();
+        var valid = url.Length <= 2048
+            && Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            && uri.Scheme == Uri.UriSchemeHttps
+            && uri.Host.Length > 0;
+        if (!valid)
+        {
+            throw new InvalidArgumentException("callbackUrl must be a public HTTPS URL (at most 2048 characters).");
+        }
+
+        return url;
+    }
+
+    /// <summary>Au plus 20 entrées, valeurs scalaires d'au plus 255 caractères, converties en chaînes.</summary>
+    public static Dictionary<string, string?>? Metadata(IReadOnlyDictionary<string, object?>? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value.Count > 20)
+        {
+            throw new InvalidArgumentException("metadata accepts at most 20 entries.");
+        }
+
+        var result = new Dictionary<string, string?>(StringComparer.Ordinal);
+        foreach (var entry in value)
+        {
+            string? text = entry.Value switch
+            {
+                null => null,
+                string s => s,
+                bool b => b ? "true" : "false",
+                decimal d => d.ToString(CultureInfo.InvariantCulture),
+                int i => i.ToString(CultureInfo.InvariantCulture),
+                long l => l.ToString(CultureInfo.InvariantCulture),
+                _ => throw new InvalidArgumentException($"metadata[\"{entry.Key}\"] must be a string."),
+            };
+            if (text is not null && text.Length > 255)
+            {
+                throw new InvalidArgumentException($"metadata[\"{entry.Key}\"] must be at most 255 characters.");
+            }
+
+            result[entry.Key] = text;
+        }
+
+        return result;
+    }
+
+    /// <summary>Identifiant LabPay (DEP-…, PAY-…, RFD-…), nettoyé et non encodé.</summary>
+    public static string Id(string? value, string field = "id")
+    {
+        var text = (value ?? string.Empty).Trim();
+        if (text.Length == 0 || text.Length > 64)
+        {
+            throw new InvalidArgumentException($"{field} must be a LabPay identifier, e.g. \"DEP-01JCX…\".");
+        }
+
+        return text;
+    }
+
+    public static int? PerPage(int? value)
+    {
+        if (value is < 1 or > MaxPerPage)
+        {
+            throw new InvalidArgumentException($"perPage must be an integer between 1 and {MaxPerPage}.");
+        }
+
+        return value;
+    }
+
+    public static int? Page(int? value)
+    {
+        if (value is < 1)
+        {
+            throw new InvalidArgumentException("page must be an integer, 1 or more.");
+        }
+
+        return value;
+    }
+}
