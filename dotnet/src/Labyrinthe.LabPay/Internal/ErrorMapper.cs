@@ -69,3 +69,73 @@ internal static class ErrorMapper
         Add((m, c, s, e, h) => new NotFoundException(m, c, s, e, h), "PAYMENT_NOT_FOUND", "DEPOSIT_NOT_FOUND", "NOTIFICATION_NOT_FOUND");
         Add(
             (m, c, s, e, h) => new ConflictException(m, c, s, e, h),
+            "NOT_A_PAYOUT",
+            "NOT_CANCELLABLE",
+            "DEPOSIT_NOT_COMPLETED",
+            "REFUND_IN_PROGRESS",
+            "DEPOSIT_ALREADY_REFUNDED");
+        Add((m, c, s, e, h) => new ValidationException(m, c, s, e, h), "VALIDATION_ERROR");
+        Add((m, c, s, e, h) => new InvalidPhoneNumberException(m, c, s, e, h), "INVALID_PHONE_NUMBER");
+        Add((m, c, s, e, h) => new InvalidRequestException(m, c, s, e, h), "UNSUPPORTED_COUNTRY", "INVALID_CURRENCY", "UNSUPPORTED_PROVIDER", "INVALID_AMOUNT");
+        Add((m, c, s, e, h) => new AmountOutOfRangeException(m, c, s, e, h), "AMOUNT_TOO_SMALL", "AMOUNT_TOO_LARGE", "AMOUNT_OUT_OF_BOUNDS");
+        Add((m, c, s, e, h) => new InsufficientBalanceException(m, c, s, e, h), "INSUFFICIENT_BALANCE");
+        Add((m, c, s, e, h) => new DailyLimitReachedException(m, c, s, e, h), "DAILY_LIMIT_REACHED");
+        Add(
+            (m, c, s, e, h) => new ServiceUnavailableException(m, c, s, e, h),
+            "MAINTENANCE",
+            "API_DISABLED",
+            "DEPOSITS_DISABLED",
+            "WITHDRAWALS_DISABLED",
+            "PROVIDER_TEMPORARILY_UNAVAILABLE",
+            "GATEWAY_UNAVAILABLE",
+            "V2_DISABLED",
+            "TEST_MODE_DISABLED");
+        return table;
+    }
+
+    private static Factory ForStatus(int status) => status switch
+    {
+        401 => (m, c, s, e, h) => new AuthenticationException(m, c, s, e, h),
+        403 => (m, c, s, e, h) => new PermissionException(m, c, s, e, h),
+        404 => (m, c, s, e, h) => new NotFoundException(m, c, s, e, h),
+        409 => (m, c, s, e, h) => new ConflictException(m, c, s, e, h),
+        422 => (m, c, s, e, h) => new InvalidRequestException(m, c, s, e, h),
+        429 => (m, c, s, e, h) => new RateLimitException(m, c, s, e, h),
+        >= 500 => (m, c, s, e, h) => new ServiceUnavailableException(m, c, s, e, h),
+        _ => (m, c, s, e, h) => new ApiException(m, c, s, e, h),
+    };
+
+    private static Dictionary<string, IReadOnlyList<string>> FieldErrors(JsonElement root)
+    {
+        var result = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        if (root.ValueKind != JsonValueKind.Object
+            || !root.TryGetProperty("errors", out var errors)
+            || errors.ValueKind != JsonValueKind.Object)
+        {
+            return result;
+        }
+
+        foreach (var field in errors.EnumerateObject())
+        {
+            var messages = new List<string>();
+            if (field.Value.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in field.Value.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.String && item.GetString() is { } text)
+                    {
+                        messages.Add(text);
+                    }
+                }
+            }
+            else if (field.Value.ValueKind == JsonValueKind.String && field.Value.GetString() is { } single)
+            {
+                messages.Add(single);
+            }
+
+            result[field.Name] = messages;
+        }
+
+        return result;
+    }
+}
