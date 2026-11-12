@@ -90,3 +90,95 @@ public final class RefundParams {
   /**
    * Your metadata, or null.
    *
+   * @return unmodifiable metadata
+   */
+  public Map<String, Object> metadata() {
+    return metadata;
+  }
+
+  /** Builder of {@link RefundParams}. Not thread-safe. */
+  public static final class Builder {
+    private String paymentId;
+    private Object amount;
+    private String reference;
+    private String callbackUrl;
+    private Map<String, Object> metadata;
+
+    private Builder() {}
+
+    /**
+     * Id of the completed V2 deposit to refund.
+     *
+     * @param paymentId e.g. {@code DEP-01JCX…}
+     * @return this builder
+     */
+    public Builder paymentId(String paymentId) {
+      this.paymentId = paymentId;
+      return this;
+    }
+
+    /**
+     * Amount to refund (default: everything left to refund).
+     *
+     * @param amount e.g. {@code "300"}
+     * @return this builder
+     */
+    public Builder amount(String amount) {
+      this.amount = amount;
+      return this;
+    }
+
+    /**
+     * Amount to refund as an exact decimal.
+     *
+     * @param amount at most 2 decimals
+     * @return this builder
+     */
+    public Builder amount(BigDecimal amount) {
+      this.amount = amount;
+      return this;
+    }
+
+    /**
+     * Your reference (idempotency key); generated when absent unless {@code autoReference(false)}.
+     *
+     * @param reference 1 to 100 of {@code A-Z a-z 0-9 . _ : -}
+     * @return this builder
+     */
+    public Builder reference(String reference) {
+      this.reference = reference;
+      return this;
+    }
+
+    /**
+     * Public HTTPS URL receiving the final status notification.
+     *
+     * @param callbackUrl the URL
+     * @return this builder
+     */
+    public Builder callbackUrl(String callbackUrl) {
+      this.callbackUrl = callbackUrl;
+      return this;
+    }
+
+    /**
+     * Up to 20 key/value pairs.
+     *
+     * @param metadata the metadata
+     * @return this builder
+     */
+    public Builder metadata(Map<String, ?> metadata) {
+      this.metadata = metadata == null ? null : new LinkedHashMap<>(metadata);
+      return this;
+    }
+
+    /**
+     * Builds the parameters.
+     *
+     * @return the parameters
+     */
+    public RefundParams build() {
+      return new RefundParams(this);
+    }
+  }
+}
