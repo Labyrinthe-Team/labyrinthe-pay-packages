@@ -75,3 +75,80 @@ def test_a_payment_without_reference_is_not_retried_after_a_network_error() -> N
 
 
 def test_a_payment_refused_at_initiation_is_returned() -> None:
+    refused = payment(status="failed", failure={"code": "PAYER_LIMIT_REACHED", "message": "Limite"})
+    client, _ = make_client(json_response(422, {"data": refused}))
+
+    result = client.deposits.create(amount="1000", currency="CDF", phone="243813456019")
+
+    assert result.is_failed
+    assert result.failure is not None and result.failure.code == "PAYER_LIMIT_REACHED"
+    assert client.last_response is not None and client.last_response.status == 422
+
+
+def test_refund() -> None:
+    client, http = make_client(json_response(201, {"data": payment(id="RFD-1", operation="refund", refunded_payment_id="DEP-1")}))
+
+    refund = client.refunds.create(payment_id="DEP-1", amount="300", reference="REFUND-42-1")
+
+    assert http.body() == {"payment_id": "DEP-1", "amount": "300", "reference": "REFUND-42-1"}
+    assert refund.refunded_payment_id == "DEP-1"
+
+
+def test_get_sync_and_cancel() -> None:
+    client, http = make_client(
+        json_response(200, {"data": payment(id="PAY-1", operation="payout", gateway_status="ENQUEUED")}),
+        json_response(200, {"data": payment(id="PAY-1", operation="payout")}),
+        json_response(200, {"data": payment(status="completed", completed_at="2026-11-11T10:00:42+00:00")}),
+    )
+
+    assert client.payments.get("PAY-1").is_queued
+    assert str(http.last.url) == "https://api.example.test/api/V2/payments/PAY-1"
+    client.payouts.cancel("PAY-1")
+    assert str(http.last.url) == "https://api.example.test/api/V2/payouts/PAY-1/cancel"
+    synced = client.payments.sync("DEP-1")
+    assert (http.last.method, str(http.last.url)) == ("POST", "https://api.example.test/api/V2/payments/DEP-1/sync")
+    assert synced.is_completed and synced.completed_at == "2026-11-11T10:00:42+00:00"
+
+
+def test_list_and_iterate() -> None:
+    meta = {"current_page": 1, "last_page": 2, "per_page": 1, "total": 2}
+    client, http = make_client(
+        json_response(200, {"data": [payment()], "links": {}, "meta": meta}),
+        json_response(200, {"data": [payment(id="DEP-2")], "links": {}, "meta": {**meta, "current_page": 2}}),
+    )
+
+    ids = [p.id for p in client.payments.iterate(status=PaymentStatus.COMPLETED, operation="deposit", from_date=dt.date(2026, 11, 1), per_page=1)]
+
+    assert ids == ["DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6", "DEP-2"]
+    assert http.last.url.query.decode() == "status=completed&operation=deposit&from=2026-11-01&per_page=1&page=2"
+
+
+def test_find_by_reference() -> None:
+    client, http = make_client(json_response(200, {"data": [], "meta": {"current_page": 1, "last_page": 1, "per_page": 1, "total": 0}}))
+
+    assert client.payments.find_by_reference("ORDER-404") is None
+    assert http.last.url.query.decode() == "reference=ORDER-404&per_page=1"
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda c: c.deposits.create(amount="0", currency="CDF", phone="0813456789"),
+        lambda c: c.deposits.create(amount="1.234", currency="CDF", phone="0813456789"),
+        lambda c: c.deposits.create(amount=12.5, currency="CDF", phone="0813456789"),
+        lambda c: c.deposits.create(amount="10", currency="FC", phone="0813456789"),
+        lambda c: c.deposits.create(amount="10", currency="CDF", phone="0813456789", reference="order 42"),
+        lambda c: c.deposits.create(amount="10", currency="CDF", phone="0813456789", callback_url="http://example.test"),
+        lambda c: c.deposits.create(amount="10", currency="CDF", phone="0813456789", customer_message="Hi"),
+        lambda c: c.deposits.create(amount="10", currency="CDF", phone="0813456789", metadata={str(i): "x" for i in range(21)}),
+        lambda c: c.payments.list(per_page=101),
+        lambda c: c.payments.list(status="done"),
+        lambda c: c.payments.list(from_date="01/11/2026"),
+    ],
+)
+def test_invalid_input_fails_before_any_request(call: Callable[[LabPay], Any]) -> None:
+    client, http = make_client()
+
+    with pytest.raises(InvalidArgumentError):
+        call(client)
+    assert http.requests == []
