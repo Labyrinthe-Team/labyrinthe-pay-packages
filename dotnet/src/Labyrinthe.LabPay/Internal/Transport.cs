@@ -210,3 +210,214 @@ internal sealed class Transport
             if (failure is not null)
             {
                 if (mode != RetryMode.Safe || attempt >= MaxRetries)
+                {
+                    Log(LabPayLogLevel.Error, $"LabPay network error on {method} {logPath} (timeout={(timedOut ? "true" : "false")})");
+                    var suffix = mode == RetryMode.ThrottledOnly ? " The request may have been processed; it was not retried automatically." : string.Empty;
+                    throw new ConnectionException($"Could not reach the LabPay API ({method} {path}): {failure}.{suffix}", timedOut);
+                }
+
+                delay = Backoff(attempt);
+                Log(LabPayLogLevel.Warning, $"LabPay network error, retrying {method} {logPath} in {(long)delay.TotalMilliseconds} ms");
+            }
+            else
+            {
+                LastResponse = new ResponseInfo(status, headers);
+                Log(LabPayLogLevel.Debug, $"LabPay response {method} {logPath}: HTTP {status}");
+                if (status is >= 200 and < 300)
+                {
+                    return new ApiResponse(status, Decode(content, status), headers);
+                }
+
+                var parsed = Json.TryParse(content);
+                if (paymentOnRefusal && status == 422 && HasPayment(parsed))
+                {
+                    return new ApiResponse(status, parsed!.Value, headers);
+                }
+
+                var error = ErrorMapper.FromResponse(status, parsed, headers);
+                var wait = attempt < MaxRetries ? RetryDelay(mode, error, attempt) : null;
+                if (wait is null)
+                {
+                    Log(LabPayLogLevel.Information, $"LabPay API error on {method} {logPath}: HTTP {status} {error.Code}");
+                    throw error;
+                }
+
+                delay = wait.Value;
+                Log(LabPayLogLevel.Warning, $"LabPay request failed, retrying {method} {logPath}: HTTP {status} {error.Code} in {(long)delay.TotalMilliseconds} ms");
+            }
+
+            await Delay(delay, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    public override string ToString() => $"Transport {{ ApiKey = {Redact.ApiKey(apiKey)}, BaseUrl = {BaseUrl}, MaxRetries = {MaxRetries} }}";
+
+    /// <summary>Secondes (éventuellement décimales) ou date HTTP ; <see langword="null"/> si absent ou illisible.</summary>
+    internal static TimeSpan? RetryAfter(IReadOnlyDictionary<string, string> headers)
+    {
+        if (!headers.TryGetValue("Retry-After", out var header) || header.Trim().Length == 0)
+        {
+            return null;
+        }
+
+        var value = header.Trim();
+        if (value.All(c => c is (>= '0' and <= '9') or '.')
+            && double.TryParse(value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var seconds))
+        {
+            return TimeSpan.FromMilliseconds(Math.Round(seconds * 1000));
+        }
+
+        if (DateTimeOffset.TryParseExact(value, "r", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var at))
+        {
+            var wait = at - DateTimeOffset.UtcNow;
+            return wait > TimeSpan.Zero ? wait : TimeSpan.Zero;
+        }
+
+        return null;
+    }
+
+    private static double SharedRandom()
+    {
+        // Gigue, pas un secret : System.Random suffit (verrouillé : Random n'est pas thread-safe sous netstandard2.0).
+        lock (RandomSource)
+        {
+#pragma warning disable CA5394 // Random n'est pas utilisé à des fins de sécurité.
+            return RandomSource.NextDouble();
+#pragma warning restore CA5394
+        }
+    }
+
+    private static string Describe(Exception exception)
+    {
+        // Message court et sans requête d'URL ; l'exception d'origine n'est jamais chaînée.
+        var inner = exception;
+        while (inner.InnerException is not null)
+        {
+            inner = inner.InnerException;
+        }
+
+        var message = Redact.StripQueryStrings(inner.Message).Trim();
+        var name = inner.GetType().Name;
+        return message.Length > 0 ? $"{name}: {message}" : name;
+    }
+
+    private static Dictionary<string, string> HeadersOf(HttpResponseMessage response)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var header in response.Headers.Concat(response.Content.Headers))
+        {
+            headers[header.Key] = string.Join(", ", header.Value);
+        }
+
+        return headers;
+    }
+
+    private static string BuildUserAgent()
+    {
+        // ".NET 8.0.10" → ".NET/8.0.10" ; ".NET Framework 4.8.9" → ".NETFramework/4.8.9".
+        var description = RuntimeInformation.FrameworkDescription.Trim();
+        var space = description.LastIndexOf(' ');
+        var product = space > 0 ? description.Substring(0, space).Replace(" ", string.Empty) : ".NET";
+        var version = space > 0 ? description.Substring(space + 1) : Environment.Version.ToString();
+        return $"labpay-dotnet/{LabPayClient.Version} {product}/{version}";
+    }
+
+    private static bool HasPayment(JsonElement? body) =>
+        body is { ValueKind: JsonValueKind.Object } root
+        && root.TryGetProperty("data", out var data)
+        && data.ValueKind == JsonValueKind.Object
+        && data.TryGetProperty("id", out _);
+
+    private static JsonElement Decode(byte[] content, int status)
+    {
+        if (content.All(b => b is (byte)' ' or (byte)'\n' or (byte)'\r' or (byte)'\t'))
+        {
+            return Json.TryParse(Encoding.UTF8.GetBytes("{}"))!.Value;
+        }
+
+        return Json.TryParse(content) ?? throw new UnexpectedResponseException("Unexpected API response: the body is not valid JSON.", status);
+    }
+
+    private string BuildUrl(string path, IReadOnlyList<KeyValuePair<string, string>> query)
+    {
+        if (query.Count == 0)
+        {
+            return BaseUrl + path;
+        }
+
+        var builder = new StringBuilder(BaseUrl).Append(path).Append('?');
+        for (var i = 0; i < query.Count; i++)
+        {
+            if (i > 0)
+            {
+                builder.Append('&');
+            }
+
+            builder.Append(Uri.EscapeDataString(query[i].Key)).Append('=').Append(Uri.EscapeDataString(query[i].Value));
+        }
+
+        return builder.ToString();
+    }
+
+    private HttpRequestMessage BuildRequest(HttpMethod method, string url, byte[]? body)
+    {
+        var request = new HttpRequestMessage(method, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        request.Headers.TryAddWithoutValidation("User-Agent", userAgent);
+        if (body is not null)
+        {
+            // Sérialisé une seule fois : chaque relance renvoie exactement les mêmes octets.
+            request.Content = new ByteArrayContent(body);
+            request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+        }
+
+        return request;
+    }
+
+    /// <summary>Délai avant la prochaine tentative ; <see langword="null"/> quand l'erreur doit être levée.</summary>
+    private TimeSpan? RetryDelay(RetryMode mode, ApiException error, int attempt)
+    {
+        var retryAfter = RetryAfter(error.Headers);
+
+        // Refusée avant traitement : seulement quand l'API annonce la réouverture.
+        if (RefusedBeforeProcessing.Contains(error.Code))
+        {
+            return retryAfter is { } reopen && reopen <= MaxRetryWait ? reopen : null;
+        }
+
+        // Seulement le limiteur : DAILY_LIMIT_REACHED est une limite métier.
+        if (error.StatusCode == 429)
+        {
+            if (error.Code != ErrorMapper.TooManyRequests)
+            {
+                return null;
+            }
+
+            if (retryAfter is { } wait)
+            {
+                return wait <= MaxRetryWait ? wait : null;
+            }
+
+            return Backoff(attempt);
+        }
+
+        return mode == RetryMode.Safe && error.StatusCode >= 500 ? Backoff(attempt) : null;
+    }
+
+    /// <summary>Backoff exponentiel avec gigue : 0,5 s, 1 s, 2 s… (50 à 100 %), plafonné.</summary>
+    private TimeSpan Backoff(int attempt)
+    {
+        var delay = Math.Min(MaxBackoffMs, BaseDelayMs * Math.Pow(2, attempt));
+        var jittered = TimeSpan.FromMilliseconds(delay * (0.5 + (Jitter() * 0.5)));
+        return jittered < MaxRetryWait ? jittered : MaxRetryWait;
+    }
+
+    private void Log(LabPayLogLevel level, string message)
+    {
+        if (logger is not null && logger.IsEnabled(level))
+        {
+            logger.Log(level, message);
+        }
+    }
+}
