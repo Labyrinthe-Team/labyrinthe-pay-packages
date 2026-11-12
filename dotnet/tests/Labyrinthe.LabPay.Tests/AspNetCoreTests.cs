@@ -90,3 +90,95 @@ public class AspNetCoreTests
         Assert.Contains("SIGNATURE_VERIFICATION_FAILED", await wrong.Content.ReadAsStringAsync(), StringComparison.Ordinal);
         Assert.Contains("INVALID_WEBHOOK_PAYLOAD", await notJson.Content.ReadAsStringAsync(), StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.MethodNotAllowed, get.StatusCode);
+        Assert.Empty(handler.Events);
+    }
+
+    [Fact]
+    public async Task Webhook_endpoint_accepts_several_secrets_and_a_delegate()
+    {
+        var events = new List<WebhookEvent>();
+        await using var app = await StartAsync(
+            _ => { },
+            app => app.MapLabPayWebhooks("/wh", (evt, _) =>
+            {
+                events.Add(evt);
+                return Task.CompletedTask;
+            }),
+            secret: "whsec_other," + Secret);
+        using var http = app.GetTestClient();
+
+        using var response = await PostAsync(http, "/wh", WebhookTests.Body, Webhook.Sign(WebhookTests.Body, Secret));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Single(events);
+    }
+
+    [Fact]
+    public async Task Webhook_endpoint_refuses_large_bodies_and_reports_handler_failures()
+    {
+        await using var app = await StartAsync(
+            services => services.Configure<LabPayWebhookOptions>(o => o.WebhookMaxBodySize = 64),
+            app => app.MapLabPayWebhooks("/wh", (_, _) => throw new InvalidOperationException("database down")));
+        using var http = app.GetTestClient();
+        using var tooLarge = await PostAsync(http, "/wh", WebhookTests.Body, Webhook.Sign(WebhookTests.Body, Secret));
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, tooLarge.StatusCode);
+
+        await using var app2 = await StartAsync(_ => { }, a => a.MapLabPayWebhooks("/wh", (_, _) => throw new InvalidOperationException("database down")));
+        using var http2 = app2.GetTestClient();
+        using var failed = await PostAsync(http2, "/wh", WebhookTests.Body, Webhook.Sign(WebhookTests.Body, Secret));
+        Assert.Equal(HttpStatusCode.InternalServerError, failed.StatusCode);
+    }
+
+    [Fact]
+    public void AddLabPayWebhookHandler_registers_a_scoped_handler()
+    {
+        var services = new ServiceCollection();
+        services.AddLabPayWebhookHandler<RecordingHandler>();
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(ILabPayWebhookHandler));
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+        Assert.Equal(typeof(RecordingHandler), descriptor.ImplementationType);
+    }
+
+    private static async Task<WebApplication> StartAsync(Action<IServiceCollection> services, Action<WebApplication> map, string? secret = Secret)
+    {
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Logging.ClearProviders();
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["LabPay:ApiKey"] = "test_x",
+            ["LabPay:WebhookSecret"] = secret,
+        });
+        builder.Services.AddLabPay(builder.Configuration);
+        services(builder.Services);
+        var app = builder.Build();
+        map(app);
+        await app.StartAsync();
+        return app;
+    }
+
+    private static async Task<HttpResponseMessage> PostAsync(HttpClient http, string path, string body, string? signature)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(path, UriKind.Relative))
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        };
+        if (signature is not null)
+        {
+            request.Headers.TryAddWithoutValidation(Webhook.SignatureHeader, signature);
+        }
+
+        return await http.SendAsync(request);
+    }
+
+    private sealed class RecordingHandler : ILabPayWebhookHandler
+    {
+        public List<WebhookEvent> Events { get; } = new();
+
+        public Task HandleAsync(WebhookEvent webhookEvent, CancellationToken cancellationToken)
+        {
+            Events.Add(webhookEvent);
+            return Task.CompletedTask;
+        }
+    }
+}
