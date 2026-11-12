@@ -124,3 +124,129 @@ internal sealed class Json
                 // Texte brut du nombre : aucune conversion en double.
                 return value.GetRawText();
             }
+        }
+
+        throw Invalid(key, "a string");
+    }
+
+    public string? NullableString(JsonElement data, string key) => IsNull(data, key) ? null : String(data, key);
+
+    public static int? NullableInt(JsonElement data, string key)
+    {
+        if (data.ValueKind != JsonValueKind.Object || !data.TryGetProperty(key, out var value))
+        {
+            return null;
+        }
+
+        return ToLong(value) is long number && number >= int.MinValue && number <= int.MaxValue ? (int)number : null;
+    }
+
+    public static long? NullableLong(JsonElement data, string key) =>
+        data.ValueKind == JsonValueKind.Object && data.TryGetProperty(key, out var value) ? ToLong(value) : null;
+
+    public static bool Bool(JsonElement data, string key, bool fallback)
+    {
+        if (data.ValueKind == JsonValueKind.Object && data.TryGetProperty(key, out var value))
+        {
+            if (value.ValueKind == JsonValueKind.True)
+            {
+                return true;
+            }
+
+            if (value.ValueKind == JsonValueKind.False)
+            {
+                return false;
+            }
+        }
+
+        return fallback;
+    }
+
+    public static DateTimeOffset? NullableDate(JsonElement data, string key) =>
+        data.ValueKind == JsonValueKind.Object && data.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String
+            ? ParseDate(value.GetString())
+            : null;
+
+    /// <summary>Table de chaînes facultative (métadonnées) : scalaires convertis en chaîne, le reste en null.</summary>
+    public Dictionary<string, string?>? NullableStringMap(JsonElement data, string key)
+    {
+        if (IsNull(data, key))
+        {
+            return null;
+        }
+
+        var result = new Dictionary<string, string?>(StringComparer.Ordinal);
+        foreach (var property in Object(data.GetProperty(key), key).EnumerateObject())
+        {
+            result[property.Name] = property.Value.ValueKind switch
+            {
+                JsonValueKind.String => property.Value.GetString(),
+                JsonValueKind.Number => property.Value.GetRawText(),
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                _ => null,
+            };
+        }
+
+        return result;
+    }
+
+    /// <summary>Valeur brute (copie indépendante du document) ; <see langword="null"/> si absente ou nulle.</summary>
+    public static JsonElement? Raw(JsonElement data, string key) =>
+        data.ValueKind == JsonValueKind.Object && data.TryGetProperty(key, out var value) && value.ValueKind != JsonValueKind.Null
+            ? value.Clone()
+            : null;
+
+    /// <summary>Corps de requête JSON écrit sans réflexion (compatible trimming / AOT). Les champs nuls de premier niveau
+    /// sont omis ; les valeurs nulles d'une table (métadonnées) sont écrites.</summary>
+    public static byte[] Write(IEnumerable<KeyValuePair<string, object?>> fields)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream, WriterOptions))
+        {
+            writer.WriteStartObject();
+            foreach (var field in fields)
+            {
+                switch (field.Value)
+                {
+                    case null:
+                        break;
+                    case string s:
+                        writer.WriteString(field.Key, s);
+                        break;
+                    case IEnumerable<KeyValuePair<string, string?>> map:
+                        writer.WriteStartObject(field.Key);
+                        foreach (var entry in map)
+                        {
+                            if (entry.Value is null)
+                            {
+                                writer.WriteNull(entry.Key);
+                            }
+                            else
+                            {
+                                writer.WriteString(entry.Key, entry.Value);
+                            }
+                        }
+
+                        writer.WriteEndObject();
+                        break;
+                    default:
+                        throw new ArgumentException("Unsupported JSON value.", nameof(fields));
+                }
+            }
+
+            writer.WriteEndObject();
+        }
+
+        return stream.ToArray();
+    }
+
+    private static bool IsNull(JsonElement data, string key) =>
+        data.ValueKind != JsonValueKind.Object || !data.TryGetProperty(key, out var value) || value.ValueKind == JsonValueKind.Null;
+
+    private static JsonElement ParseConstant(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.Clone();
+    }
+}
