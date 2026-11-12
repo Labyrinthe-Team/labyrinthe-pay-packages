@@ -95,3 +95,99 @@ def _parse(header: str) -> Tuple[Optional[int], List[str]]:
         if key == "t" and _T.match(value):
             timestamp = int(value)
         elif key == "v1" and _V1.match(value):
+            signatures.append(value.lower())
+    return timestamp, signatures
+
+
+def verify(
+    raw_body: RawBody,
+    signature_header: Optional[str],
+    secret: Secrets,
+    *,
+    tolerance: int = DEFAULT_TOLERANCE,
+    now: Optional[float] = None,
+) -> int:
+    """Checks the signature (constant time) and the timestamp; returns the signed timestamp.
+
+    :param tolerance: max age of the signed timestamp, in seconds; 0 disables the check (not recommended)
+    :raises SignatureVerificationError: answer 400
+    """
+    secrets = _secrets(secret)
+    timestamp, signatures = _parse(signature_header or "")
+    if timestamp is None or not signatures:
+        raise SignatureVerificationError(
+            'Missing or malformed X-Labyrinthe-Signature header (expected "t=<timestamp>,v1=<signature>").'
+        )
+    body = _bytes(raw_body)
+    valid = False
+    for candidate in secrets:
+        expected = _compute(candidate, timestamp, body)
+        for signature in signatures:
+            valid = hmac.compare_digest(expected, signature) or valid
+    if not valid:
+        raise SignatureVerificationError("Invalid notification signature: the body was not signed with this secret.")
+    current = time.time() if now is None else now
+    if tolerance > 0 and abs(current - timestamp) > tolerance:
+        raise SignatureVerificationError(f"Notification timestamp is outside the {tolerance} s tolerance (possible replay).")
+    return timestamp
+
+
+def is_valid(
+    raw_body: RawBody,
+    signature_header: Optional[str],
+    secret: Secrets,
+    *,
+    tolerance: int = DEFAULT_TOLERANCE,
+    now: Optional[float] = None,
+) -> bool:
+    """True when the signature and the timestamp are valid."""
+    try:
+        verify(raw_body, signature_header, secret, tolerance=tolerance, now=now)
+    except SignatureVerificationError:
+        return False
+    return True
+
+
+def construct_event(
+    raw_body: RawBody,
+    signature_header: Optional[str],
+    secret: Secrets,
+    *,
+    tolerance: int = DEFAULT_TOLERANCE,
+    now: Optional[float] = None,
+) -> WebhookEvent:
+    """Verifies a notification and returns the typed event. Pass the RAW body, never re-encoded JSON.
+
+    :raises SignatureVerificationError: wrong/missing signature or old timestamp: answer 400
+    :raises InvalidWebhookPayloadError: signed body that is not a notification: answer 400
+    """
+    timestamp = verify(raw_body, signature_header, secret, tolerance=tolerance, now=now)
+    try:
+        body = json.loads(_bytes(raw_body).decode("utf-8"))
+    except ValueError:
+        raise InvalidWebhookPayloadError("The notification body is not valid JSON.") from None
+    if not isinstance(body, dict):
+        raise InvalidWebhookPayloadError("The notification body is not a JSON object.")
+    name = body.get("event")
+    if not isinstance(name, str):
+        raise InvalidWebhookPayloadError('Invalid notification payload: "event" should be a string.')
+    try:
+        payment = Payment.from_api(body.get("payment"))
+    except UnexpectedResponseError as exc:
+        raise InvalidWebhookPayloadError(exc.message.replace("Unexpected API payload", "Invalid notification payload")) from None
+    sent_at = body.get("sent_at")
+    return WebhookEvent(
+        type=WebhookEventType(name),
+        name=name,
+        payment=payment,
+        sent_at=sent_at if isinstance(sent_at, str) else None,
+        timestamp=timestamp,
+        raw=body,
+    )
+
+
+def sign(raw_body: RawBody, secret: Secrets, timestamp: Optional[int] = None) -> str:
+    """The X-Labyrinthe-Signature value LabPay would send (one ``v1`` per secret): to test your endpoint."""
+    ts = int(time.time()) if timestamp is None else timestamp
+    body = _bytes(raw_body)
+    return ",".join([f"t={ts}"] + [f"v1={_compute(s, ts, body)}" for s in _secrets(secret)])
