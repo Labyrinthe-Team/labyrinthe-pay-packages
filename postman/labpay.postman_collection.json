@@ -1,0 +1,2669 @@
+{
+  "auth": {
+    "bearer": [
+      {
+        "key": "token",
+        "type": "string",
+        "value": "{{token}}"
+      }
+    ],
+    "type": "bearer"
+  },
+  "event": [],
+  "info": {
+    "_postman_id": "68e9bf5b-85e3-4dc8-af68-3854f38154f1",
+    "description": {
+      "content": "Generated from `openapi/openapi.yaml` (spec 2.0.0). Do not edit by hand: run `npm run generate` in `postman/`.\n\nSelect an environment (`local` or `production`) and set its `token` variable (secret) to a **test key**\n(`test_…`): sandbox, no real money moves, separate balances and payments. Every request uses\n`{{baseUrl}}/V2/…` and inherits the Bearer auth of the collection.\n\nRun the collection in order (Collection Runner or Newman) to play the nominal flow: toolkit, account,\na deposit (its `id` is saved in `paymentId`), its reading, its sync, the list, then notifications.\nThe \"Account — key rotation (live token only)\" folder rotates real secrets: with a test key it only returns `403 LIVE_TOKEN_REQUIRED`.\n\n---\n\nPublic merchant API of LabPay, operated by Labyrinthe Innovations SARL.\n\nDerived from the payment engine code (`routes/api/v2/payments.php`, `routes/api/v2/toolkit.php`,\nV2 controllers and form requests, `PaymentPresenter`, `MerchantNotifier`). The V1 API is not described here.\n\n- **Authentication**: `Authorization: Bearer <token>` (or `X-Api-Token`). A key starting with `test_` puts\n  the request in test mode (sandbox, separate balances and payments, no KYC required). Never in the body or the URL.\n- **Responses** are always JSON. Every authenticated response carries `X-Labyrinthe-Mode: live|test`.\n- **Amounts**: string or number with at most 2 decimals in requests; always strings with 2 decimals in responses.\n- **Rate limit**: 120 requests per minute per token; beyond, `429` with `Retry-After` and no `code`.\n- **Idempotency**: `reference` is unique per token and mode; resending a payment with a known reference returns\n  the existing payment (200 completed, 201/202 pending, 422 failed) instead of creating a second one.\n- **Errors**: `{ \"message\", \"code\" }`, plus `errors` (per field) for a validation error. The list of codes is open.",
+      "type": "text/markdown"
+    },
+    "name": "LabPay API V2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "description": {
+        "content": "Countries, providers, availability and provider prediction.",
+        "type": "text/markdown"
+      },
+      "event": [],
+      "id": "51c0e2a0-43ad-4eed-a368-78ac60e18e21",
+      "item": [
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 429)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,429]);",
+                  "});",
+                  "pm.test('Success (200)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}"
+                ],
+                "id": "14a6cfd6-6a1c-4c7c-a59a-242789080b9e",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "28b588be-cba5-4d4c-aaf9-927690d816f8",
+          "name": "GET /countries — Countries open to payments",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {},
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "name": "Countries open to payments",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "countries"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/countries",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": [\n    {\n      \"country\": \"COD\",\n      \"name\": \"République démocratique du Congo\",\n      \"dial_code\": \"243\",\n      \"currencies\": [\n        \"CDF\",\n        \"USD\"\n      ],\n      \"limits\": {\n        \"CDF\": {\n          \"min_amount\": null,\n          \"max_amount\": null\n        },\n        \"USD\": {\n          \"min_amount\": null,\n          \"max_amount\": null\n        }\n      },\n      \"default\": true\n    }\n  ]\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "e7613b15-b6ab-4403-a5f7-a017f03f6db1",
+              "name": "Open countries.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "countries"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/countries",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "268d99c7-dcf1-46b3-a463-7ff86aaf72c3",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "countries"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/countries",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "158a7521-b0da-4943-a7c8-f5558299df40",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "countries"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/countries",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 422, 429, 503)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,422,429,503]);",
+                  "});",
+                  "pm.test('Success (200)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}"
+                ],
+                "id": "beb1cfcc-11e4-4097-a0d5-b998d2781e1e",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "7eb72bef-66bd-42db-a294-23897fa0ea7e",
+          "name": "GET /providers — Providers and their rules",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {},
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "name": "Providers and their rules",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "providers"
+              ],
+              "query": [
+                {
+                  "description": "Default: deposit",
+                  "disabled": false,
+                  "key": "operation",
+                  "value": "deposit"
+                },
+                {
+                  "description": "Default: every open country",
+                  "disabled": false,
+                  "key": "country",
+                  "value": "COD"
+                }
+              ],
+              "raw": "{{baseUrl}}/V2/providers?operation=deposit&country=COD",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": [\n    {\n      \"provider\": \"VODACOM_MPESA_COD\",\n      \"country\": \"COD\",\n      \"name\": \"Vodacom M-Pesa\",\n      \"name_displayed_to_customer\": \"M-Pesa\",\n      \"logo\": null,\n      \"currencies\": {\n        \"CDF\": {\n          \"min_amount\": null,\n          \"max_amount\": null,\n          \"decimals\": \"NONE\",\n          \"status\": \"OPERATIONAL\"\n        }\n      }\n    }\n  ]\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "d97d881b-6d18-416b-a740-2e57af9400b8",
+              "name": "Providers of the open countries.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "providers"
+                  ],
+                  "query": [
+                    {
+                      "key": "operation",
+                      "value": "payout"
+                    },
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/providers?operation=payout&country=Mim",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "a856bdaa-2bf9-424a-a6c6-dc4d64ec4a5f",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "providers"
+                  ],
+                  "query": [
+                    {
+                      "key": "operation",
+                      "value": "payout"
+                    },
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/providers?operation=payout&country=Mim",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"The selected country is invalid.\",\n  \"errors\": {\n    \"country\": [\n      \"The selected country is invalid.\"\n    ]\n  }\n}",
+              "code": 422,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "80b9be3b-64bb-49da-ad0c-05b3a32660ec",
+              "name": "Invalid parameters. On `GET /providers`, `/availability` and `/notifications` the body has no `code`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "providers"
+                  ],
+                  "query": [
+                    {
+                      "key": "operation",
+                      "value": "payout"
+                    },
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/providers?operation=payout&country=Mim",
+                  "variable": []
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "a7cb8ca7-8159-4658-ab32-815a7f254a15",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "providers"
+                  ],
+                  "query": [
+                    {
+                      "key": "operation",
+                      "value": "payout"
+                    },
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/providers?operation=payout&country=Mim",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Service en maintenance, réessayez plus tard.\",\n  \"code\": \"MAINTENANCE\"\n}",
+              "code": 503,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "8be7956c-9188-4bdf-a28b-7cf928f4496f",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "providers"
+                  ],
+                  "query": [
+                    {
+                      "key": "operation",
+                      "value": "payout"
+                    },
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/providers?operation=payout&country=Mim",
+                  "variable": []
+                }
+              },
+              "status": "Service Unavailable"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 422, 429, 503)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,422,429,503]);",
+                  "});",
+                  "pm.test('Success (200)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}"
+                ],
+                "id": "c6bb53d7-cf1b-4abb-a73c-429a9596e529",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "36eab0b2-bf0b-4803-a517-75b8d27b9c91",
+          "name": "GET /availability — Provider availability",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {},
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "name": "Provider availability",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "availability"
+              ],
+              "query": [
+                {
+                  "disabled": false,
+                  "key": "country",
+                  "value": "COD"
+                }
+              ],
+              "raw": "{{baseUrl}}/V2/availability?country=COD",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"VODACOM_MPESA_COD\": {\n      \"country\": \"COD\",\n      \"DEPOSIT\": \"OPERATIONAL\",\n      \"PAYOUT\": \"DELAYED\"\n    }\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "89da31e1-9a9c-41fc-acb8-4fc288f849ff",
+              "name": "Object keyed by provider code (an empty object when none).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "availability"
+                  ],
+                  "query": [
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/availability?country=Mim",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "82037282-329e-4eac-ae54-01a39ce40ecb",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "availability"
+                  ],
+                  "query": [
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/availability?country=Mim",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"The selected country is invalid.\",\n  \"errors\": {\n    \"country\": [\n      \"The selected country is invalid.\"\n    ]\n  }\n}",
+              "code": 422,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "a11d78ad-083f-438a-aa5b-6b2924f162f5",
+              "name": "Invalid parameters. On `GET /providers`, `/availability` and `/notifications` the body has no `code`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "availability"
+                  ],
+                  "query": [
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/availability?country=Mim",
+                  "variable": []
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "ec065079-c864-4faf-adfb-69823d1ad467",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "availability"
+                  ],
+                  "query": [
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/availability?country=Mim",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Service en maintenance, réessayez plus tard.\",\n  \"code\": \"MAINTENANCE\"\n}",
+              "code": 503,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "0cdb2da8-5d84-49bc-a277-6ee7487f4e6f",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "availability"
+                  ],
+                  "query": [
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/availability?country=Mim",
+                  "variable": []
+                }
+              },
+              "status": "Service Unavailable"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 422, 429)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,422,429]);",
+                  "});",
+                  "pm.test('Success (200)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}",
+                  "pm.test('Provider predicted', function () { pm.expect(body.data).to.include.keys('phone', 'provider', 'country'); });"
+                ],
+                "id": "8464db21-ff92-49cf-aaab-66aeddc8fee8",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "0f1c69b7-c73b-46c4-aae8-3eaf0ffbc512",
+          "name": "POST /predict-provider — Predict a number's provider",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"phone\": \"0813456789\",\n  \"country\": \"COD\"\n}"
+            },
+            "description": {
+              "content": "Validates a number and predicts its provider, without creating a payment.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "name": "Predict a number's provider",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "predict-provider"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/predict-provider",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"phone\": \"243813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"country\": \"COD\"\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "7017153e-c310-40b3-abd4-e585f0a918bf",
+              "name": "Normalized number, provider and country.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"phone\": \"0813456789\",\n  \"country\": \"COD\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "predict-provider"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/predict-provider",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "e2f8f6e2-cff2-4c93-a63c-94837fb41401",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"phone\": \"0813456789\",\n  \"country\": \"COD\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "predict-provider"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/predict-provider",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Paramètres invalides.\",\n  \"code\": \"VALIDATION_ERROR\",\n  \"errors\": {\n    \"phone\": [\n      \"Le numéro de téléphone est invalide.\"\n    ]\n  }\n}",
+              "code": 422,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "af22acdd-dcf0-43ea-a217-66aef639795f",
+              "name": "Invalid parameters. On `GET /providers`, `/availability` and `/notifications` the body has no `code`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"phone\": \"0813456789\",\n  \"country\": \"COD\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "predict-provider"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/predict-provider",
+                  "variable": []
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "14dfd075-e71f-4fd4-a983-0bda734e432c",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"phone\": \"0813456789\",\n  \"country\": \"COD\"\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "predict-provider"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/predict-provider",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            }
+          ]
+        }
+      ],
+      "name": "Toolkit"
+    },
+    {
+      "description": {
+        "content": "Account, keys and balances.",
+        "type": "text/markdown"
+      },
+      "event": [],
+      "id": "158cf3d4-1054-4a4a-ad82-7ec730af79da",
+      "item": [
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 429)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,429]);",
+                  "});",
+                  "pm.test('Success (200)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}",
+                  "pm.test('Account', function () { pm.expect(body.data).to.include.keys('mode', 'live_enabled', 'kyc_verified', 'fees'); });"
+                ],
+                "id": "5db52d6a-c216-4a8f-ad0b-bf4cb88411d5",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "c48619f1-9c92-4af0-a976-7ecf16544571",
+          "name": "GET /account — Account, fee rates, test key and signing secret",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {},
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "name": "Account, fee rates, test key and signing secret",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "account"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/account",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"mode\": \"test\",\n    \"merchant\": \"Boutique Exemple\",\n    \"live_enabled\": false,\n    \"kyc_verified\": false,\n    \"fees\": {\n      \"deposit_rate\": \"0.0350\",\n      \"payout_rate\": \"0.0350\"\n    },\n    \"test_key\": \"test_xxxxxxxxxxxxxxxx\"\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "eb399df7-ee69-4696-af8c-5a7e996dbee3",
+              "name": "The account. Null fields are omitted.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "account"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/account",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "5cf48004-d7a9-403c-a0d1-ed755a577a92",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "account"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/account",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "42bab716-2499-4661-a9b1-3bb1bceea9a7",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "account"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/account",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 429)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,429]);",
+                  "});",
+                  "pm.test('Success (200)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}"
+                ],
+                "id": "e0ce5024-e039-42c4-a9e2-8e0a685d4918",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "81226f3a-b404-473b-a036-77b8effd5512",
+          "name": "GET /balances — Balances per currency",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {
+              "content": "In the mode of the key used (test balances with the test key). Shared with V1.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "name": "Balances per currency",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "balances"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/balances",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": [\n    {\n      \"currency\": \"CDF\",\n      \"balance\": \"125000.00\",\n      \"updated_at\": \"2026-11-11T10:00:42+00:00\"\n    },\n    {\n      \"currency\": \"USD\",\n      \"balance\": \"0.00\",\n      \"updated_at\": null\n    }\n  ]\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "7dba6c03-1da3-48d3-a770-9b7bef4681ca",
+              "name": "One balance per currency.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "balances"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/balances",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "9ea40cec-cbeb-4664-a1ac-90e1299b3fee",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "balances"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/balances",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "b63c795a-7f33-4d19-af48-1c7b77e9da79",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "balances"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/balances",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            }
+          ]
+        }
+      ],
+      "name": "Account"
+    },
+    {
+      "description": {
+        "content": "Deposits (collection), payouts, refunds and tracking.",
+        "type": "text/markdown"
+      },
+      "event": [],
+      "id": "0f5d8093-52be-4847-ae7e-8e834d120a74",
+      "item": [
+        {
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Nouvelle référence à chaque exécution (clé d'idempotence : la renvoyer rend le même paiement).",
+                  "pm.collectionVariables.set('reference', 'POSTMAN-DEP-' + Date.now());"
+                ],
+                "id": "0bdb79be-4b2f-4aff-ae9a-221ef48f412a",
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 201, 202, 401, 403, 422, 429, 503)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,202,401,403,422,429,503]);",
+                  "});",
+                  "pm.test('Success (200, 201, 202)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,202]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}",
+                  "if (body.data && body.data.id) {",
+                  "  pm.collectionVariables.set('paymentId', body.data.id);",
+                  "  pm.test('Deposit with the reference sent', function () {",
+                  "    pm.expect(body.data.operation).to.eql('deposit');",
+                  "    pm.expect(body.data.reference).to.eql(pm.collectionVariables.get('reference'));",
+                  "    pm.expect(body.data.status).to.be.oneOf(['pending', 'completed', 'failed']);",
+                  "    pm.expect(body.data.amount).to.match(/^\\d+\\.\\d{2}$/);",
+                  "  });",
+                  "}"
+                ],
+                "id": "76383994-b82d-4eed-a301-998191930373",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "ee75aaca-4237-421f-abfc-5fe9999db177",
+          "name": "POST /deposits — Collect from a customer",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"amount\": \"1000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"{{reference}}\",\n  \"customer_message\": \"Commande Postman\",\n  \"metadata\": {\n    \"source\": \"postman\"\n  }\n}"
+            },
+            "description": {
+              "content": "The customer gets a PIN prompt on their phone; the payment stays `pending` until they confirm, then moves\nto `completed` or `failed`. The customer pays `amount` + fees (`total_amount`); your balance is credited with\n`amount` on confirmation. Only deliver an order on `completed`.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "name": "Collect from a customer",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "deposits"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/deposits",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n    \"reference\": \"ORDER-42\",\n    \"operation\": \"deposit\",\n    \"livemode\": false,\n    \"status\": \"completed\",\n    \"gateway_status\": \"ACCEPTED\",\n    \"amount\": \"1000.00\",\n    \"fee\": \"35.00\",\n    \"total_amount\": \"1035.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": \"MP2611110001\",\n    \"failure\": null,\n    \"metadata\": {\n      \"orderId\": \"42\"\n    },\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": \"2026-11-11T10:00:42+00:00\",\n    \"refunded_amount\": \"0.00\"\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "2ecf7939-eb9c-4f60-a19e-6cff9adb38d3",
+              "name": "The `reference` was already used by a completed payment, which is returned.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"1000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"ORDER-42\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"customer_message\": \"Commande 42\",\n  \"metadata\": {\n    \"orderId\": \"42\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "deposits"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/deposits",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n    \"reference\": \"ORDER-42\",\n    \"operation\": \"deposit\",\n    \"livemode\": false,\n    \"status\": \"pending\",\n    \"gateway_status\": \"ACCEPTED\",\n    \"amount\": \"1000.00\",\n    \"fee\": \"35.00\",\n    \"total_amount\": \"1035.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": null,\n    \"failure\": null,\n    \"metadata\": {\n      \"orderId\": \"42\"\n    },\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": null,\n    \"refunded_amount\": \"0.00\"\n  }\n}",
+              "code": 201,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Mode of the key used.",
+                  "disabled": false,
+                  "key": "X-Labyrinthe-Mode",
+                  "value": "test"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "f28437c5-4efc-474f-aa4b-0ef8d9ae690c",
+              "name": "Accepted, awaiting the final status (or resend of a pending `reference`).",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"1000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"ORDER-42\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"customer_message\": \"Commande 42\",\n  \"metadata\": {\n    \"orderId\": \"42\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "deposits"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/deposits",
+                  "variable": []
+                }
+              },
+              "status": "Created"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n    \"reference\": \"ORDER-42\",\n    \"operation\": \"deposit\",\n    \"livemode\": false,\n    \"status\": \"pending\",\n    \"gateway_status\": \"UNKNOWN\",\n    \"amount\": \"1000.00\",\n    \"fee\": \"35.00\",\n    \"total_amount\": \"1035.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": null,\n    \"failure\": null,\n    \"metadata\": {\n      \"orderId\": \"42\"\n    },\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": null,\n    \"refunded_amount\": \"0.00\"\n  }\n}",
+              "code": 202,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "827f1cb5-6232-4a60-aab2-dd2a1d109ef4",
+              "name": "Unknown aggregator answer (`gateway_status: UNKNOWN`). The payment stays `pending` and its status is re-read automatically. Not a failure.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"1000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"ORDER-42\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"customer_message\": \"Commande 42\",\n  \"metadata\": {\n    \"orderId\": \"42\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "deposits"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/deposits",
+                  "variable": []
+                }
+              },
+              "status": "Accepted"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "25c9785b-d2a4-4a68-aac6-568bedce67e2",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"1000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"ORDER-42\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"customer_message\": \"Commande 42\",\n  \"metadata\": {\n    \"orderId\": \"42\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "deposits"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/deposits",
+                  "variable": []
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Vérification du compte (KYC) requise pour les paiements en production.\",\n  \"code\": \"KYC_REQUIRED\"\n}",
+              "code": 403,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "4f88ca06-23d2-427e-a955-5f94ac2d71ce",
+              "name": "`TOKEN_BLOCKED`, `MERCHANT_INACTIVE`, `KYC_REQUIRED` or `LIVE_TOKEN_REQUIRED`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"1000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"ORDER-42\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"customer_message\": \"Commande 42\",\n  \"metadata\": {\n    \"orderId\": \"42\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "deposits"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/deposits",
+                  "variable": []
+                }
+              },
+              "status": "Forbidden"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Numéro de téléphone invalide.\",\n  \"code\": \"INVALID_PHONE_NUMBER\"\n}",
+              "code": 422,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "e26a3f22-b409-4f1f-a2f1-9406081068e5",
+              "name": "Either the payment was refused at initiation — it was recorded and is returned in `data` with\n`status: failed` and `failure` — or the request is invalid (`VALIDATION_ERROR`, `INVALID_PHONE_NUMBER`,\n`UNSUPPORTED_COUNTRY`, `INVALID_CURRENCY`, `UNSUPPORTED_PROVIDER`, `INVALID_AMOUNT`, `AMOUNT_TOO_SMALL`,\n`AMOUNT_TOO_LARGE`, `AMOUNT_OUT_OF_BOUNDS`, `INSUFFICIENT_BALANCE`).\n",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"1000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"ORDER-42\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"customer_message\": \"Commande 42\",\n  \"metadata\": {\n    \"orderId\": \"42\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "deposits"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/deposits",
+                  "variable": []
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "ce768280-4ab1-463d-a0f7-72b0cc6ea4ed",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"1000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"ORDER-42\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"customer_message\": \"Commande 42\",\n  \"metadata\": {\n    \"orderId\": \"42\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "deposits"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/deposits",
+                  "variable": []
+                }
+              },
+              "status": "Too Many Requests"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Service en maintenance, réessayez plus tard.\",\n  \"code\": \"MAINTENANCE\"\n}",
+              "code": 503,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "825c36b8-3346-4b8e-a806-f8e5a428729e",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "originalRequest": {
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"amount\": \"1000\",\n  \"currency\": \"CDF\",\n  \"phone\": \"0813456789\",\n  \"reference\": \"ORDER-42\",\n  \"callback_url\": \"https://boutique.example/webhooks/labpay\",\n  \"customer_message\": \"Commande 42\",\n  \"metadata\": {\n    \"orderId\": \"42\"\n  }\n}"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "deposits"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/deposits",
+                  "variable": []
+                }
+              },
+              "status": "Service Unavailable"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 404, 429)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,404,429]);",
+                  "});",
+                  "pm.test('Success (200)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}",
+                  "pm.test('Same payment', function () { pm.expect(body.data.id).to.eql(pm.collectionVariables.get('paymentId')); });"
+                ],
+                "id": "4bbba292-3133-4f3f-abb5-1249842f02d8",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "afda4e03-8e2d-4c0e-a3cd-485926559658",
+          "name": "GET /payments/:id — Get a payment",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {},
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "name": "Get a payment",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "payments",
+                ":id"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/payments/:id",
+              "variable": [
+                {
+                  "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                  "disabled": false,
+                  "key": "id",
+                  "type": "any",
+                  "value": "{{paymentId}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n    \"reference\": \"ORDER-42\",\n    \"operation\": \"deposit\",\n    \"livemode\": false,\n    \"status\": \"completed\",\n    \"gateway_status\": \"ACCEPTED\",\n    \"amount\": \"1000.00\",\n    \"fee\": \"35.00\",\n    \"total_amount\": \"1035.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": \"MP2611110001\",\n    \"failure\": null,\n    \"metadata\": {\n      \"orderId\": \"42\"\n    },\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": \"2026-11-11T10:00:42+00:00\",\n    \"refunded_amount\": \"0.00\"\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Mode of the key used.",
+                  "disabled": false,
+                  "key": "X-Labyrinthe-Mode",
+                  "value": "test"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "81ebaeb3-4516-445d-ae0d-599d5cdd61f5",
+              "name": "The payment.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments",
+                    ":id"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payments/:id",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "9c9d42a3-688a-41ea-ad32-065ae58d0829",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments",
+                    ":id"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payments/:id",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Paiement introuvable.\",\n  \"code\": \"PAYMENT_NOT_FOUND\"\n}",
+              "code": 404,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "c6c6fe20-3084-4d72-aec0-addb55c259b0",
+              "name": "`PAYMENT_NOT_FOUND`, `DEPOSIT_NOT_FOUND` or `NOTIFICATION_NOT_FOUND`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments",
+                    ":id"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payments/:id",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "4abafc21-9704-4598-af59-657b180757cd",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments",
+                    ":id"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payments/:id",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Too Many Requests"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 404, 429)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,404,429]);",
+                  "});",
+                  "pm.test('Success (200)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}",
+                  "pm.test('Same payment', function () { pm.expect(body.data.id).to.eql(pm.collectionVariables.get('paymentId')); });"
+                ],
+                "id": "0ad0c323-555e-4fc0-a57c-13e5760cb9dc",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "61245a44-afa5-4e1d-a26d-c8aed37aa788",
+          "name": "POST /payments/:id/sync — Refresh the status now",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {
+              "content": "Queries the aggregator for a payment still `pending` and applies its status; a final payment is returned as is.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "name": "Refresh the status now",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "payments",
+                ":id",
+                "sync"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/V2/payments/:id/sync",
+              "variable": [
+                {
+                  "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                  "disabled": false,
+                  "key": "id",
+                  "type": "any",
+                  "value": "{{paymentId}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": {\n    \"id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n    \"reference\": \"ORDER-42\",\n    \"operation\": \"deposit\",\n    \"livemode\": false,\n    \"status\": \"completed\",\n    \"gateway_status\": \"ACCEPTED\",\n    \"amount\": \"1000.00\",\n    \"fee\": \"35.00\",\n    \"total_amount\": \"1035.00\",\n    \"currency\": \"CDF\",\n    \"country\": \"COD\",\n    \"phone\": \"0813456789\",\n    \"provider\": \"VODACOM_MPESA_COD\",\n    \"provider_transaction_id\": \"MP2611110001\",\n    \"failure\": null,\n    \"metadata\": {\n      \"orderId\": \"42\"\n    },\n    \"created_at\": \"2026-11-11T10:00:00+00:00\",\n    \"completed_at\": \"2026-11-11T10:00:42+00:00\",\n    \"refunded_amount\": \"0.00\"\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Mode of the key used.",
+                  "disabled": false,
+                  "key": "X-Labyrinthe-Mode",
+                  "value": "test"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "4f16c9b8-61be-4c40-ad50-3f7a0ec946b3",
+              "name": "The payment.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments",
+                    ":id",
+                    "sync"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payments/:id/sync",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "c1ea8975-1102-4161-a137-6e891cb2a01a",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments",
+                    ":id",
+                    "sync"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payments/:id/sync",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Paiement introuvable.\",\n  \"code\": \"PAYMENT_NOT_FOUND\"\n}",
+              "code": 404,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "13f32135-9d20-46b3-a7c5-eefd2f31afa9",
+              "name": "`PAYMENT_NOT_FOUND`, `DEPOSIT_NOT_FOUND` or `NOTIFICATION_NOT_FOUND`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments",
+                    ":id",
+                    "sync"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payments/:id/sync",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Too Many Attempts.\"\n}",
+              "code": 429,
+              "cookie": [],
+              "header": [
+                {
+                  "description": "Seconds to wait before retrying.",
+                  "disabled": false,
+                  "key": "Retry-After",
+                  "value": "7925"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "09dd7e4a-f068-4ab9-a7fd-a4d6aeb4b362",
+              "name": "Rate limit (`{ \"message\": \"Too Many Attempts.\" }`, no `code`) or `DAILY_LIMIT_REACHED`.",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments",
+                    ":id",
+                    "sync"
+                  ],
+                  "query": [],
+                  "raw": "{{baseUrl}}/V2/payments/:id/sync",
+                  "variable": [
+                    {
+                      "description": "(Required) LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).",
+                      "disabled": false,
+                      "key": "id",
+                      "type": "any",
+                      "value": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Too Many Requests"
+            }
+          ]
+        },
+        {
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP status documented by the spec (200, 401, 422, 429)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,401,422,429]);",
+                  "});",
+                  "pm.test('Success (200)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('JSON body', function () {",
+                  "  pm.response.to.be.json;",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.test('Body with data', function () { pm.expect(body).to.have.property('data'); });",
+                  "  pm.test('X-Labyrinthe-Mode header', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Labyrinthe-Mode')).to.be.oneOf(['live', 'test']);",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Error with a message', function () { pm.expect(body).to.have.property('message'); });",
+                  "}",
+                  "pm.test('Paginated list', function () {",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "  pm.expect(body.meta).to.include.keys('current_page', 'last_page', 'per_page', 'total');",
+                  "});"
+                ],
+                "id": "62ea140c-28ce-42ce-a195-90e412a03ac0",
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "id": "fa4ffef4-e74c-4766-a9fa-b21a899c7811",
+          "name": "GET /payments — List payments",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "description": {
+              "content": "V2 payments of the token, newest first, in the mode of the key used.",
+              "type": "text/markdown"
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "name": "List payments",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "V2",
+                "payments"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "status",
+                  "value": "pending"
+                },
+                {
+                  "disabled": true,
+                  "key": "operation",
+                  "value": "deposit"
+                },
+                {
+                  "disabled": true,
+                  "key": "currency",
+                  "value": "CDF"
+                },
+                {
+                  "disabled": true,
+                  "key": "country",
+                  "value": "COD"
+                },
+                {
+                  "disabled": true,
+                  "key": "reference",
+                  "value": "ORDER-42"
+                },
+                {
+                  "description": "Creation date lower bound",
+                  "disabled": true,
+                  "key": "from",
+                  "value": "2026-11-01"
+                },
+                {
+                  "description": "Creation date upper bound (≥ from)",
+                  "disabled": true,
+                  "key": "to",
+                  "value": "2026-11-30"
+                },
+                {
+                  "disabled": false,
+                  "key": "per_page",
+                  "value": "20"
+                },
+                {
+                  "disabled": false,
+                  "key": "page",
+                  "value": "1"
+                }
+              ],
+              "raw": "{{baseUrl}}/V2/payments?per_page=20&page=1",
+              "variable": []
+            }
+          },
+          "response": [
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6\",\n      \"reference\": \"ORDER-42\",\n      \"operation\": \"deposit\",\n      \"livemode\": false,\n      \"status\": \"completed\",\n      \"gateway_status\": \"ACCEPTED\",\n      \"amount\": \"1000.00\",\n      \"fee\": \"35.00\",\n      \"total_amount\": \"1035.00\",\n      \"currency\": \"CDF\",\n      \"country\": \"COD\",\n      \"phone\": \"0813456789\",\n      \"provider\": \"VODACOM_MPESA_COD\",\n      \"provider_transaction_id\": \"MP2611110001\",\n      \"failure\": null,\n      \"metadata\": {\n        \"orderId\": \"42\"\n      },\n      \"created_at\": \"2026-11-11T10:00:00+00:00\",\n      \"completed_at\": \"2026-11-11T10:00:42+00:00\",\n      \"refunded_amount\": \"0.00\"\n    }\n  ],\n  \"links\": {\n    \"first\": null,\n    \"last\": null,\n    \"prev\": null,\n    \"next\": null\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"last_page\": 1,\n    \"per_page\": 20,\n    \"total\": 1\n  }\n}",
+              "code": 200,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "cd077553-3e5e-4530-a435-8ec1f02ed425",
+              "name": "Paginated payments (Laravel resource collection).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "V2",
+                    "payments"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "failed"
+                    },
+                    {
+                      "key": "operation",
+                      "value": "payout"
+                    },
+                    {
+                      "key": "currency",
+                      "value": "Mim"
+                    },
+                    {
+                      "key": "country",
+                      "value": "Mim"
+                    },
+                    {
+                      "key": "reference",
+                      "value": "string"
+                    },
+                    {
+                      "key": "from",
+                      "value": "1961-01-10"
+                    },
+                    {
+                      "key": "to",
+                      "value": "1961-01-10"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "page",
+                      "value": "467"
+                    }
+                  ],
+                  "raw": "{{baseUrl}}/V2/payments?status=failed&operation=payout&currency=Mim&country=Mim&reference=string&from=1961-01-10&to=1961-01-10&per_page=20&page=467",
+                  "variable": []
+                }
+              },
+              "status": "OK"
+            },
+            {
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Token API manquant ou invalide. Envoyez-le dans l'en-tête Authorization: Bearer <token>.\",\n  \"code\": \"UNAUTHENTICATED\"\n}",
+              "code": 401,
+              "cookie": [],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "id": "ea1251fa-254e-4653-a5eb-b9d6cb785b34",
+              "name": "Missing or invalid token (`UNAUTHENTICATED`).",
+              "originalRequest": {
+                "body": {},
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "url": {
