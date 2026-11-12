@@ -93,3 +93,98 @@ public static class LabPayEndpointRouteBuilderExtensions
             .ExcludeFromDescription();
     }
 
+    private static async Task<IResult> HandleAsync(HttpContext context, Func<HttpContext, ILabPayWebhookHandler> resolve)
+    {
+        var options = context.RequestServices.GetService<IOptions<LabPayWebhookOptions>>()?.Value ?? new LabPayWebhookOptions();
+        var logger = context.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("Labyrinthe.LabPay.AspNetCore.Webhooks");
+        var secrets = Secrets(!string.IsNullOrEmpty(options.WebhookSecret) ? options.WebhookSecret : Environment.GetEnvironmentVariable("LABPAY_WEBHOOK_SECRET"));
+        if (secrets.Count == 0)
+        {
+            throw new InvalidOperationException("The LabPay webhook secret is not configured: set LabPay:WebhookSecret or LABPAY_WEBHOOK_SECRET.");
+        }
+
+        var body = await ReadBodyAsync(context, options.WebhookMaxBodySize).ConfigureAwait(false);
+        if (body is null)
+        {
+            return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        }
+
+        WebhookEvent webhookEvent;
+        try
+        {
+            webhookEvent = Webhook.ConstructEvent(body, context.Request.Headers[Webhook.SignatureHeader].ToString(), secrets, options.WebhookTolerance);
+        }
+        catch (Exception exception) when (exception is SignatureVerificationException or InvalidWebhookPayloadException)
+        {
+            var code = ((LabPayException)exception).Code;
+            if (logger is not null)
+            {
+                Log.Rejected(logger, code, null);
+            }
+
+            return Results.Content("{\"received\":false,\"error\":\"" + code + "\"}", "application/json", null, StatusCodes.Status400BadRequest);
+        }
+
+        await resolve(context).HandleAsync(webhookEvent, context.RequestAborted).ConfigureAwait(false);
+        return Results.Content("{\"received\":true}", "application/json");
+    }
+
+    private static List<string> Secrets(string? value)
+    {
+        var list = new List<string>();
+        foreach (var part in (value ?? string.Empty).Split(','))
+        {
+            if (part.Trim().Length > 0)
+            {
+                list.Add(part.Trim());
+            }
+        }
+
+        return list;
+    }
+
+    /// <summary>Corps brut, ou <see langword="null"/> s'il dépasse la taille maximale.</summary>
+    private static async Task<byte[]?> ReadBodyAsync(HttpContext context, long maxBodySize)
+    {
+        if (context.Request.ContentLength > maxBodySize)
+        {
+            return null;
+        }
+
+        var sizeFeature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
+        if (sizeFeature is { IsReadOnly: false })
+        {
+            sizeFeature.MaxRequestBodySize = maxBodySize;
+        }
+
+        using var buffer = new MemoryStream();
+        var chunk = new byte[16 * 1024];
+        int read;
+        while ((read = await context.Request.Body.ReadAsync(chunk, context.RequestAborted).ConfigureAwait(false)) > 0)
+        {
+            if (buffer.Length + read > maxBodySize)
+            {
+                return null;
+            }
+
+            buffer.Write(chunk, 0, read);
+        }
+
+        return buffer.ToArray();
+    }
+
+    private sealed class DelegateHandler : ILabPayWebhookHandler
+    {
+        private readonly Func<WebhookEvent, CancellationToken, Task> handler;
+
+        public DelegateHandler(Func<WebhookEvent, CancellationToken, Task> handler) => this.handler = handler;
+
+        public Task HandleAsync(WebhookEvent webhookEvent, CancellationToken cancellationToken) => handler(webhookEvent, cancellationToken);
+    }
+
+    private static class Log
+    {
+        public static readonly Action<ILogger, string, Exception?> Rejected =
+            LoggerMessage.Define<string>(LogLevel.Warning, new EventId(10, "LabPayWebhookRejected"), "LabPay notification rejected: {Code}");
+    }
+}
