@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+    <RootNamespace>Labyrinthe.LabPay</RootNamespace>
+    <AssemblyName>Labyrinthe.LabPay</AssemblyName>
+    <PackageId>Labyrinthe.LabPay</PackageId>
+    <Title>LabPay</Title>
+    <Description>Official .NET client for LabPay, the Mobile Money aggregator of the DR Congo (M-Pesa, Airtel Money, Orange Money; CDF and USD): deposits, payouts, refunds, payment tracking and signed notifications. Safe retries with idempotency, typed errors, exact amounts.</Description>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <IsTrimmable>true</IsTrimmable>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <!-- netstandard2.0 : System.Text.Json et IAsyncEnumerable viennent de packages (intégrés à net8.0). -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Labyrinthe.LabPay.Tests" />
+  </ItemGroup>
+
+</Project>
