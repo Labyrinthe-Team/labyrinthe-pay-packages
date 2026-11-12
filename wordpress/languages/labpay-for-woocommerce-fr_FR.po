@@ -1,0 +1,214 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: LabPay for WooCommerce 0.1.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/labpay-for-woocommerce\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: French\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-11-12T18:45:00+00:00\n"
+"PO-Revision-Date: 2026-11-12T18:51:41+00:00\n"
+"Language: fr_FR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: labpay-for-woocommerce\n"
+
+#. Plugin Name of the plugin
+#: labpay-for-woocommerce.php:3
+msgid "LabPay for WooCommerce"
+msgstr "LabPay pour WooCommerce"
+
+#. Plugin URI of the plugin
+#: labpay-for-woocommerce.php:4
+msgid "https://docs.pay.labyrinthe-rdc.com"
+msgstr "https://docs.pay.labyrinthe-rdc.com"
+
+#. Description of the plugin
+#: labpay-for-woocommerce.php:5
+msgid "Mobile Money payments for WooCommerce with LabPay: M-Pesa, Airtel Money and Orange Money in the DR Congo (CDF and USD)."
+msgstr "Paiements Mobile Money pour WooCommerce avec LabPay : M-Pesa, Airtel Money et Orange Money en RD Congo (CDF et USD)."
+
+#. Author of the plugin
+#: labpay-for-woocommerce.php:10
+msgid "Labyrinthe Innovations SARL"
+msgstr "Labyrinthe Innovations SARL"
+
+#. Author URI of the plugin
+#: labpay-for-woocommerce.php:11
+msgid "https://pay.labyrinthe-rdc.com"
+msgstr "https://pay.labyrinthe-rdc.com"
+
+#: includes/class-ajax.php:93
+msgid "Order not found."
+msgstr "Commande introuvable."
+
+#: includes/class-ajax.php:237
+msgid "Payment received. Thank you!"
+msgstr "Paiement reçu. Merci !"
+
+#: includes/class-ajax.php:239
+msgid "Payment received: the shop is checking it."
+msgstr "Paiement reçu : la boutique le vérifie."
+
+#: includes/class-ajax.php:241
+msgid "The payment did not go through (refused, cancelled or expired). You have not been charged."
+msgstr "Le paiement n'a pas abouti (refusé, annulé ou expiré). Vous n'avez pas été débité."
+
+#: includes/class-ajax.php:243
+msgid "Confirm the payment on your phone: enter your Mobile Money PIN when asked."
+msgstr "Confirmez le paiement sur votre téléphone : saisissez votre code PIN Mobile Money quand il vous est demandé."
+
+#: includes/class-client-factory.php:53
+msgid "No LabPay test key is configured."
+msgstr "Aucune clé de test LabPay n'est configurée."
+
+#: includes/class-client-factory.php:54
+msgid "No LabPay API token is configured."
+msgstr "Aucun token API LabPay n'est configuré."
+
+#: includes/class-gateway.php:30
+msgid "LabPay (Mobile Money)"
+msgstr "LabPay (Mobile Money)"
+
+#: includes/class-gateway.php:31
+msgid "M-Pesa, Airtel Money and Orange Money payments in the DR Congo with LabPay. The customer confirms the payment on their phone with their PIN."
+msgstr "Paiements M-Pesa, Airtel Money et Orange Money en RD Congo avec LabPay. Le client confirme le paiement sur son téléphone avec son code PIN."
+
+#: includes/class-gateway.php:41
+#: includes/class-gateway.php:69
+msgid "Mobile Money (M-Pesa, Airtel Money, Orange Money)"
+msgstr "Mobile Money (M-Pesa, Airtel Money, Orange Money)"
+
+#: includes/class-gateway.php:60
+msgid "Enable"
+msgstr "Activer"
+
+#: includes/class-gateway.php:62
+msgid "Accept Mobile Money payments with LabPay"
+msgstr "Accepter les paiements Mobile Money avec LabPay"
+
+#: includes/class-gateway.php:66
+msgid "Title"
+msgstr "Titre"
+
+#: includes/class-gateway.php:68
+msgid "Name of the payment method shown at checkout."
+msgstr "Nom du moyen de paiement affiché à la validation de commande."
+
+#: includes/class-gateway.php:73
+msgid "Description"
+msgstr "Description"
+
+#: includes/class-gateway.php:75
+msgid "Text shown under the payment method at checkout."
+msgstr "Texte affiché sous le moyen de paiement à la validation de commande."
+
+#: includes/class-gateway.php:76
+msgid "Pay with your Mobile Money account: you will receive a confirmation request (PIN) on your phone."
+msgstr "Payez avec votre compte Mobile Money : vous recevrez une demande de confirmation (code PIN) sur votre téléphone."
+
+#: includes/class-gateway.php:80
+msgid "API keys"
+msgstr "Clés API"
+
+#: includes/class-gateway.php:82
+msgid "Find your token, your test key and your signing secret in your LabPay merchant area (Developers). They are stored encrypted and never shown again."
+msgstr "Votre token, votre clé de test et votre secret de signature se trouvent dans votre espace marchand LabPay (Développeurs). Ils sont enregistrés chiffrés et ne sont plus jamais affichés."
+
+#: includes/class-gateway.php:85
+msgid "Test mode"
+msgstr "Mode test"
+
+#: includes/class-gateway.php:87
+msgid "Use the test key (sandbox: no real money moves)"
+msgstr "Utiliser la clé de test (bac à sable : aucun argent réel n'est déplacé)"
+
+#: includes/class-gateway.php:89
+msgid "Orders paid in test mode are marked \"test mode\" in their notes. Uncheck when your account is activated for production."
+msgstr "Les commandes payées en mode test portent la mention « mode test » dans leurs notes. Décochez quand votre compte est activé pour la production."
+
+#: includes/class-gateway.php:92
+msgid "API token (live)"
+msgstr "Token API (production)"
+
+#: includes/class-gateway.php:94
+msgid "Production token. Leave unchanged to keep the saved value; empty the field to remove it."
+msgstr "Token de production. Laissez le champ inchangé pour garder la valeur enregistrée ; videz-le pour la supprimer."
+
+#: includes/class-gateway.php:99
+msgid "Test key"
+msgstr "Clé de test"
+
+#: includes/class-gateway.php:101
+msgid "Starts with test_. Used when test mode is enabled."
+msgstr "Commence par test_. Utilisée quand le mode test est activé."
+
+#: includes/class-gateway.php:106
+msgid "Signing secret"
+msgstr "Secret de signature"
+
+#. translators: %s: webhook URL.
+#: includes/class-gateway.php:110
+#, php-format
+msgid "whsec_… secret used to check the notifications sent by LabPay to %s (sent automatically with each payment when your site uses HTTPS)."
+msgstr "Secret whsec_… qui sert à vérifier les notifications envoyées par LabPay à %s (adresse transmise automatiquement avec chaque paiement quand votre site est en HTTPS)."
+
+#: includes/class-gateway.php:117
+msgid "Advanced"
+msgstr "Avancé"
+
+#: includes/class-gateway.php:121
+msgid "Reference prefix"
+msgstr "Préfixe des références"
+
+#: includes/class-gateway.php:123
+msgid "LabPay references are \"<prefix>-<order ID>-<attempt>\". Change it if several shops share the same LabPay token (letters, digits, . _ : -)."
+msgstr "Les références LabPay sont « <préfixe>-<n° de commande>-<tentative> ». Changez-le si plusieurs boutiques partagent le même token LabPay (lettres, chiffres, . _ : -)."
+
+#: includes/class-gateway.php:128
+msgid "Debug log"
+msgstr "Journal détaillé"
+
+#: includes/class-gateway.php:130
+msgid "Log every LabPay request (WooCommerce > Status > Logs, source \"labpay\")"
+msgstr "Journaliser chaque requête LabPay (WooCommerce > État > Journaux, source « labpay »)"
+
+#: includes/class-gateway.php:132
+msgid "Errors are always logged. Keys, secrets and signatures are never logged; phone numbers are masked."
+msgstr "Les erreurs sont toujours journalisées. Les clés, secrets et signatures ne le sont jamais ; les numéros sont masqués."
+
+#. translators: %s: setting name.
+#: includes/class-gateway.php:146
+#, php-format
+msgid "%s can no longer be read (the WordPress salts of wp-config.php changed): enter it again."
+msgstr "%s ne peut plus être lu (les salts WordPress de wp-config.php ont changé) : saisissez-le à nouveau."
+
+#: includes/class-gateway.php:151
+msgid "Test mode is enabled but no test key is saved: the payment method is hidden at checkout."
+msgstr "Le mode test est activé mais aucune clé de test n'est enregistrée : le moyen de paiement est masqué à la validation de commande."
+
+#: includes/class-gateway.php:152
+msgid "No live API token is saved: the payment method is hidden at checkout."
+msgstr "Aucun token API de production n'est enregistré : le moyen de paiement est masqué à la validation de commande."
+
+#. translators: %s: shop currency code.
+#: includes/class-gateway.php:156
+#, php-format
+msgid "LabPay accepts CDF and USD only; the shop currency is %s: the payment method is hidden at checkout."
+msgstr "LabPay accepte uniquement le CDF et l'USD ; la devise de la boutique est %s : le moyen de paiement est masqué à la validation de commande."
+
+#: includes/class-gateway.php:159
+msgid "No signing secret: LabPay notifications are refused, statuses are only updated by the waiting page."
+msgstr "Aucun secret de signature : les notifications LabPay sont refusées, les statuts ne sont mis à jour que par la page d'attente."
+
+#: includes/class-gateway.php:162
+msgid "Your site does not use HTTPS: LabPay cannot send it notifications, statuses are only updated by the waiting page."
+msgstr "Votre site n'utilise pas HTTPS : LabPay ne peut pas lui envoyer de notifications, les statuts ne sont mis à jour que par la page d'attente."
+
+#: includes/class-gateway.php:205
+#: assets/js/blocks.js:97
+msgid "Test mode: no real money moves."
+msgstr "Mode test : aucun argent réel n'est déplacé."
+
+#: includes/class-gateway.php:220
