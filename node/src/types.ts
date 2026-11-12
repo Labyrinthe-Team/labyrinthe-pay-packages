@@ -200,3 +200,205 @@ function nstr(data: Json, key: string): string | null {
   return str(data, key);
 }
 
+function nint(data: Json, key: string): number | null {
+  const value = data[key];
+  if (typeof value === 'number' && Number.isInteger(value)) return value;
+  if (typeof value === 'string' && /^-?\d+$/.test(value)) return Number(value);
+  return null;
+}
+
+function bool(data: Json, key: string, fallback = false): boolean {
+  const value = data[key];
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+/** @internal */
+export function toPayment(value: unknown): Payment {
+  const data = asObject(value, 'payment');
+  const failure = data['failure'] === null || data['failure'] === undefined ? null : asObject(data['failure'], 'failure');
+  let metadata: Record<string, string | null> | null = null;
+  if (data['metadata'] !== null && data['metadata'] !== undefined) {
+    metadata = {};
+    for (const [key, item] of Object.entries(asObject(data['metadata'], 'metadata'))) {
+      metadata[key] = typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean' ? String(item) : null;
+    }
+  }
+  return {
+    id: str(data, 'id'),
+    reference: nstr(data, 'reference'),
+    operation: nstr(data, 'operation') ?? 'unknown',
+    livemode: bool(data, 'livemode', true),
+    status: nstr(data, 'status') ?? 'unknown',
+    gatewayStatus: nstr(data, 'gateway_status'),
+    amount: str(data, 'amount'),
+    fee: nstr(data, 'fee'),
+    totalAmount: nstr(data, 'total_amount'),
+    currency: str(data, 'currency'),
+    country: nstr(data, 'country'),
+    phone: nstr(data, 'phone'),
+    provider: nstr(data, 'provider'),
+    providerTransactionId: nstr(data, 'provider_transaction_id'),
+    failure: failure === null ? null : { code: str(failure, 'code'), message: nstr(failure, 'message') },
+    metadata,
+    createdAt: nstr(data, 'created_at'),
+    completedAt: nstr(data, 'completed_at'),
+    refundedAmount: nstr(data, 'refunded_amount'),
+    refundedPaymentId: nstr(data, 'refunded_payment_id'),
+    raw: data,
+  };
+}
+
+/** @internal */
+export function toPage<T>(body: unknown, map: (item: unknown) => T): Page<T> {
+  const object = asObject(body, 'body');
+  const data = asArray(object['data'], 'data').map(map);
+  const meta = object['meta'] === undefined ? {} : asObject(object['meta'], 'meta');
+  const currentPage = nint(meta, 'current_page') ?? 1;
+  const lastPage = nint(meta, 'last_page') ?? 1;
+  return {
+    data,
+    currentPage,
+    lastPage,
+    perPage: nint(meta, 'per_page') ?? data.length,
+    total: nint(meta, 'total') ?? data.length,
+    hasMore: currentPage < lastPage,
+  };
+}
+
+/** @internal */
+export function toBalance(value: unknown): Balance {
+  const data = asObject(value, 'balance');
+  return { currency: str(data, 'currency'), balance: str(data, 'balance'), updatedAt: nstr(data, 'updated_at') };
+}
+
+/** @internal */
+export function toAccount(value: unknown): Account {
+  const data = asObject(value, 'account');
+  const fees = data['fees'] === undefined ? {} : asObject(data['fees'], 'fees');
+  return {
+    mode: nstr(data, 'mode') ?? 'unknown',
+    merchant: nstr(data, 'merchant'),
+    liveEnabled: bool(data, 'live_enabled'),
+    kycVerified: bool(data, 'kyc_verified'),
+    fees: { depositRate: nstr(fees, 'deposit_rate'), payoutRate: nstr(fees, 'payout_rate') },
+    testKey: nstr(data, 'test_key'),
+    webhookSecret: nstr(data, 'webhook_secret'),
+    webhookSecretPreviousExpiresAt: nstr(data, 'webhook_secret_previous_expires_at'),
+  };
+}
+
+/** @internal */
+export function toWebhookSecret(value: unknown): WebhookSecret {
+  const data = asObject(value, 'data');
+  return { webhookSecret: str(data, 'webhook_secret'), webhookSecretPreviousExpiresAt: nstr(data, 'webhook_secret_previous_expires_at') };
+}
+
+function toLimits(value: unknown): AmountLimits {
+  const data = typeof value === 'object' && value !== null ? (value as Json) : {};
+  return { minAmount: nstr(data, 'min_amount'), maxAmount: nstr(data, 'max_amount') };
+}
+
+/** @internal */
+export function toCountry(value: unknown): Country {
+  const data = asObject(value, 'country');
+  const limits: Record<string, AmountLimits> = {};
+  const rawLimits = data['limits'] === undefined || data['limits'] === null ? {} : asObject(data['limits'], 'limits');
+  for (const [currency, limit] of Object.entries(rawLimits)) {
+    limits[currency] = toLimits(limit);
+  }
+  const currencies = Array.isArray(data['currencies']) ? data['currencies'].filter((c): c is string => typeof c === 'string') : [];
+  return {
+    country: str(data, 'country'),
+    name: nstr(data, 'name'),
+    dialCode: nstr(data, 'dial_code'),
+    currencies,
+    limits,
+    isDefault: bool(data, 'default'),
+  };
+}
+
+/** @internal */
+export function toProvider(value: unknown): Provider {
+  const data = asObject(value, 'provider');
+  const currencies: Record<string, ProviderCurrency> = {};
+  const raw = data['currencies'] === undefined || data['currencies'] === null ? {} : asObject(data['currencies'], 'currencies');
+  for (const [currency, rules] of Object.entries(raw)) {
+    const r = typeof rules === 'object' && rules !== null ? (rules as Json) : {};
+    currencies[currency] = {
+      ...toLimits(r),
+      decimals: nstr(r, 'decimals'),
+      status: nstr(r, 'status'),
+      pinPrompt: r['pin_prompt'] ?? null,
+      pinPromptRevivable: r['pin_prompt_revivable'] ?? null,
+      pinPromptInstructions: r['pin_prompt_instructions'] ?? null,
+    };
+  }
+  return {
+    provider: str(data, 'provider'),
+    country: nstr(data, 'country'),
+    name: nstr(data, 'name'),
+    nameDisplayedToCustomer: nstr(data, 'name_displayed_to_customer'),
+    logo: nstr(data, 'logo'),
+    currencies,
+  };
+}
+
+/** @internal */
+export function toAvailability(provider: string, value: unknown): ProviderAvailability {
+  const data = typeof value === 'object' && value !== null ? (value as Json) : {};
+  const statuses: Record<string, string | null> = {};
+  for (const [type, status] of Object.entries(data)) {
+    if (type !== 'country') statuses[type] = typeof status === 'string' ? status : null;
+  }
+  return { provider, country: nstr(data, 'country'), statuses };
+}
+
+/** @internal */
+export function toPrediction(value: unknown): ProviderPrediction {
+  const data = asObject(value, 'data');
+  return { phone: str(data, 'phone'), provider: str(data, 'provider'), country: str(data, 'country') };
+}
+
+/** @internal */
+export function toNotification(value: unknown): Notification {
+  const data = asObject(value, 'notification');
+  const id = nint(data, 'id');
+  if (id === null) {
+    throw new UnexpectedResponseError('Unexpected API payload: "id" should be an integer.', 'UNEXPECTED_RESPONSE');
+  }
+  return {
+    id,
+    event: nstr(data, 'event') ?? 'unknown',
+    paymentId: nstr(data, 'payment_id'),
+    url: nstr(data, 'url'),
+    status: nstr(data, 'status') ?? 'unknown',
+    attempts: nint(data, 'attempts') ?? 0,
+    lastStatusCode: nint(data, 'last_status_code'),
+    lastError: nstr(data, 'last_error'),
+    nextAttemptAt: nstr(data, 'next_attempt_at'),
+    deliveredAt: nstr(data, 'delivered_at'),
+    createdAt: nstr(data, 'created_at'),
+  };
+}
+
+// ─── Aides ───────────────────────────────────────────────────────────────────
+
+/** Deposit: your balance is credited. Payout / refund: the money has left. Deliver only on this status. */
+export function isCompleted(payment: Pick<Payment, 'status'>): boolean {
+  return payment.status === 'completed';
+}
+
+/** Failed or cancelled; see `failure`. */
+export function isFailed(payment: Pick<Payment, 'status'>): boolean {
+  return payment.status === 'failed';
+}
+
+/** `completed` or `failed`: the payment will no longer change. */
+export function isFinal(payment: Pick<Payment, 'status'>): boolean {
+  return isCompleted(payment) || isFailed(payment);
+}
+
+/** A payout queued by the provider (`gateway_status: ENQUEUED`): it can be cancelled. */
+export function isQueued(payment: Pick<Payment, 'status' | 'gatewayStatus'>): boolean {
+  return payment.status === 'pending' && payment.gatewayStatus === 'ENQUEUED';
+}
