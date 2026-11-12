@@ -63,3 +63,68 @@ final class WebhookTest extends TestCase
     public function testTamperedBodyIsRefused(): void
     {
         $body = self::body();
+        $header = Webhook::sign($body, self::SECRET, self::NOW);
+
+        $this->expectException(SignatureVerificationException::class);
+        Webhook::constructEvent(str_replace('1000.00', '9000.00', $body), $header, self::SECRET, now: self::NOW);
+    }
+
+    public function testOldTimestampIsRefused(): void
+    {
+        $body = self::body();
+        $header = Webhook::sign($body, self::SECRET, self::NOW);
+
+        $this->expectException(SignatureVerificationException::class);
+        $this->expectExceptionMessage('tolerance');
+        Webhook::constructEvent($body, $header, self::SECRET, now: self::NOW + 301);
+    }
+
+    public function testToleranceCanBeDisabled(): void
+    {
+        $body = self::body();
+
+        self::assertTrue(Webhook::isValid($body, Webhook::sign($body, self::SECRET, 1), self::SECRET, 0, self::NOW));
+    }
+
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public static function malformedHeaders(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'no timestamp' => ['v1='.str_repeat('a', 64)];
+        yield 'no signature' => ['t=123'];
+        yield 'short signature' => ['t=123,v1=abc'];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('malformedHeaders')]
+    public function testMalformedHeadersAreRefused(string $header): void
+    {
+        $this->expectException(SignatureVerificationException::class);
+        Webhook::verify(self::body(), $header, self::SECRET, now: self::NOW);
+    }
+
+    public function testSignedButInvalidPayload(): void
+    {
+        $body = '{"event":"payment.completed"}';
+
+        $this->expectException(InvalidWebhookPayloadException::class);
+        Webhook::constructEvent($body, Webhook::sign($body, self::SECRET, self::NOW), self::SECRET, now: self::NOW);
+    }
+
+    public function testUnknownEventIsKept(): void
+    {
+        $body = json_encode(['event' => 'payment.something', 'payment' => self::payment(), 'sent_at' => null], \JSON_THROW_ON_ERROR);
+
+        $event = Webhook::constructEvent($body, Webhook::sign($body, self::SECRET, self::NOW), self::SECRET, now: self::NOW);
+
+        self::assertSame(WebhookEventType::Unknown, $event->type);
+        self::assertSame('payment.something', $event->name);
+    }
+
+    public function testEmptySecretIsRefused(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        Webhook::verify('{}', 't=1,v1='.str_repeat('a', 64), '');
+    }
+}
