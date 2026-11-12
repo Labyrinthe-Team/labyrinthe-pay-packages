@@ -1,0 +1,76 @@
+{
+    "name": "labyrinthe/labpay-laravel",
+    "description": "Laravel integration of LabPay (Mobile Money in the DR Congo): client, facade, publishable config and signed webhook route.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["labpay", "laravel", "mobile-money", "m-pesa", "airtel-money", "orange-money", "payments", "drc", "webhooks"],
+    "homepage": "https://docs.pay.labyrinthe-rdc.com",
+    "authors": [
+        {
+            "name": "Labyrinthe Innovations SARL",
+            "email": "contact@labyrinthe-rdc.com",
+            "homepage": "https://pay.labyrinthe-rdc.com"
+        }
+    ],
+    "support": {
+        "email": "contact@labyrinthe-rdc.com",
+        "docs": "https://docs.pay.labyrinthe-rdc.com"
+    },
+    "require": {
+        "php": "^8.1",
+        "illuminate/contracts": "^10.0 || ^11.0 || ^12.0 || ^13.0",
+        "illuminate/events": "^10.0 || ^11.0 || ^12.0 || ^13.0",
+        "illuminate/http": "^10.0 || ^11.0 || ^12.0 || ^13.0",
+        "illuminate/routing": "^10.0 || ^11.0 || ^12.0 || ^13.0",
+        "illuminate/support": "^10.0 || ^11.0 || ^12.0 || ^13.0",
+        "labyrinthe/labpay-php": "^0.1.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^2.9 || ^3.0",
+        "orchestra/testbench": "^8.22 || ^9.0 || ^10.0 || ^11.0",
+        "phpunit/phpunit": "^10.5 || ^11.5 || ^12.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../php",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "labyrinthe/labpay-php": "0.1.0"
+                }
+            }
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Labyrinthe\\LabPay\\Laravel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Labyrinthe\\LabPay\\Laravel\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Labyrinthe\\LabPay\\Laravel\\LabPayServiceProvider"
+            ],
+            "aliases": {
+                "LabPay": "Labyrinthe\\LabPay\\Laravel\\Facades\\LabPay"
+            }
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "check": ["@analyse", "@test"]
+    },
+    "config": {
+        "sort-packages": true,
+        "preferred-install": "dist"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
