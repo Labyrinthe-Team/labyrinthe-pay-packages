@@ -100,3 +100,104 @@ class ErrorsTest {
         json(
             422,
             "{\"message\":\"The selected status is invalid.\","
+                + "\"errors\":{\"status\":[\"The selected status is invalid.\"]}}"));
+
+    ValidationException e =
+        assertThrows(ValidationException.class, () -> api.client().notifications().list());
+    assertEquals("VALIDATION_ERROR", e.code());
+  }
+
+  @Test
+  void rejectsABodyThatIsNotJson() {
+    api.enqueue(MockApi.raw(200, "not json"));
+    assertThrows(UnexpectedResponseException.class, () -> api.client().account().get());
+  }
+
+  @Test
+  void retriesTheRateLimiterAfterRetryAfter() {
+    api.enqueue(
+        json(429, "{\"message\":\"Too Many Attempts.\"}").header("Retry-After", "3"),
+        data(200, payment()));
+
+    api.client().payments().get("DEP-1");
+
+    assertEquals(2, api.requests.size());
+    assertEquals(List.of(Duration.ofSeconds(3)), api.sleeper.sleeps);
+  }
+
+  @Test
+  void throwsWhenRetryAfterIsLongerThanMaxRetryWait() {
+    api.enqueue(json(429, "{\"message\":\"Too Many Attempts.\"}").header("Retry-After", "60"));
+
+    RateLimitException e =
+        assertThrows(RateLimitException.class, () -> api.client().payments().get("DEP-1"));
+
+    assertEquals("TOO_MANY_REQUESTS", e.code());
+    assertEquals(60L, e.retryAfter().orElseThrow());
+    assertEquals(1, api.requests.size());
+  }
+
+  @Test
+  void neverRetriesTheDailyLimit() {
+    api.enqueue(error(429, "DAILY_LIMIT_REACHED").header("Retry-After", "1"));
+
+    assertThrows(
+        DailyLimitReachedException.class,
+        () -> api.client().deposits().create(MobileMoneyParams.of("10", "CDF", "0813456789")));
+    assertEquals(1, api.requests.size());
+  }
+
+  @Test
+  void retriesServerErrorsOnReadsWithBackoff() {
+    api.enqueue(error(503, "GATEWAY_UNAVAILABLE"), MockApi.raw(502, "<html>"), data(200, "[]"));
+
+    assertTrue(api.client().providers().list().isEmpty());
+    assertEquals(3, api.requests.size());
+    assertEquals(2, api.sleeper.sleeps.size());
+    for (Duration sleep : api.sleeper.sleeps) {
+      assertTrue(sleep.toMillis() >= 250 && sleep.toMillis() <= 1000, sleep.toString());
+    }
+  }
+
+  @Test
+  void onlyRetriesMaintenanceWithAShortRetryAfter() {
+    api.enqueue(error(503, "MAINTENANCE").header("Retry-After", "2"), error(503, "MAINTENANCE"));
+
+    assertThrows(ServiceUnavailableException.class, () -> api.client().payments().get("DEP-1"));
+    assertEquals(2, api.requests.size());
+    assertEquals(List.of(Duration.ofSeconds(2)), api.sleeper.sleeps);
+  }
+
+  @Test
+  void neverRetriesRotationsAfterAServerError() {
+    api.enqueue(MockApi.raw(500, ""));
+    LabPayClient labpay = api.builder().apiKey("live_token_abcdefgh").build();
+
+    assertThrows(ServiceUnavailableException.class, () -> labpay.account().rotateWebhookSecret());
+    assertEquals(1, api.requests.size());
+  }
+
+  @Test
+  void retriesReadsAfterANetworkError() {
+    api.enqueue(MockApi.disconnect(), data(200, payment()));
+
+    assertEquals("ORDER-42", api.client().payments().get("DEP-1").reference());
+    assertEquals(2, api.requests.size());
+  }
+
+  @Test
+  void reportsATimeoutWithoutLeakingTheQueryString() {
+    api.enqueue(json(200, "{\"data\":[]}").delay(2_000));
+    LabPayClient labpay = api.builder().timeout(Duration.ofMillis(200)).maxRetries(0).build();
+
+    ConnectionException e =
+        assertThrows(
+            ConnectionException.class,
+            () ->
+                labpay.payments().list(ListPaymentsParams.builder().reference("ORDER-1").build()));
+
+    assertEquals("TIMEOUT", e.code());
+    assertTrue(e.isTimeout());
+    assertFalse(e.getMessage().contains("ORDER-1"));
+  }
+}
