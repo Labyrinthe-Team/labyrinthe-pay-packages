@@ -76,3 +76,81 @@ describe('retries', () => {
     const { labpay, sleeps } = client(http.fetch);
 
     await labpay.payments.get('DEP-1');
+
+    expect(http.requests).toHaveLength(2);
+    expect(sleeps).toEqual([3000]);
+  });
+
+  it('throws when Retry-After is longer than maxRetryWaitMs', async () => {
+    const http = mockFetch(json(429, { message: 'Too Many Attempts.' }, { 'Retry-After': '60' }));
+    const { labpay } = client(http.fetch);
+
+    const error = await labpay.payments.get('DEP-1').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(RateLimitError);
+    expect(error).toMatchObject({ code: 'TOO_MANY_REQUESTS', retryAfter: 60 });
+    expect(http.requests).toHaveLength(1);
+  });
+
+  it('never retries the daily limit', async () => {
+    const http = mockFetch(json(429, { message: 'Limite', code: 'DAILY_LIMIT_REACHED' }, { 'Retry-After': '1' }));
+    const { labpay } = client(http.fetch);
+
+    await expect(labpay.deposits.create({ amount: '10', currency: 'CDF', phone: '0813456789' })).rejects.toBeInstanceOf(DailyLimitReachedError);
+    expect(http.requests).toHaveLength(1);
+  });
+
+  it('retries server errors on reads with backoff', async () => {
+    const http = mockFetch(json(503, { message: 'Indisponible', code: 'GATEWAY_UNAVAILABLE' }), new Response('<html>', { status: 502 }), json(200, { data: [] }));
+    const { labpay, sleeps } = client(http.fetch);
+
+    expect(await labpay.providers.list()).toEqual([]);
+    expect(http.requests).toHaveLength(3);
+    expect(sleeps).toHaveLength(2);
+  });
+
+  it('only retries maintenance with a short Retry-After', async () => {
+    const http = mockFetch(
+      json(503, { message: 'Maintenance', code: 'MAINTENANCE' }, { 'Retry-After': '2' }),
+      json(503, { message: 'Maintenance', code: 'MAINTENANCE' }),
+    );
+    const { labpay, sleeps } = client(http.fetch);
+
+    await expect(labpay.payments.get('DEP-1')).rejects.toBeInstanceOf(ServiceUnavailableError);
+    expect(http.requests).toHaveLength(2);
+    expect(sleeps).toEqual([2000]);
+  });
+
+  it('never retries rotations after a server error', async () => {
+    const http = mockFetch(new Response('', { status: 500 }));
+    const { labpay } = client(http.fetch, { apiKey: 'live_token_abcdefgh' });
+
+    await expect(labpay.account.rotateWebhookSecret()).rejects.toBeInstanceOf(ServiceUnavailableError);
+    expect(http.requests).toHaveLength(1);
+  });
+
+  it('reports a timeout without leaking the query string', async () => {
+    const fetch = (_url: string, init: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => {
+          reject(new Error('aborted ?phone=0813456789'));
+        });
+      });
+    const labpay = new LabPay({ apiKey: 'test_x', fetch, timeoutMs: 10, maxRetries: 0 });
+
+    const error = await labpay.payments.list({ reference: 'ORDER-1' }).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({ name: 'ConnectionError', code: 'TIMEOUT' });
+    expect(String((error as Error).message)).not.toContain('ORDER-1');
+  });
+
+  it('honours an AbortSignal', async () => {
+    const http = mockFetch();
+    const { labpay } = client(http.fetch);
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(labpay.payments.get('DEP-1', { signal: controller.signal })).rejects.toMatchObject({ code: 'REQUEST_ABORTED' });
+    expect(http.requests).toHaveLength(0);
+  });
+});
