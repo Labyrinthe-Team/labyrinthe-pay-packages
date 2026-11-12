@@ -76,3 +76,81 @@ final class HttpMock {
 	 * @param string $message Message.
 	 */
 	public function push_network_error( string $message = 'cURL error 7: Failed to connect' ): self {
+		$this->queue[] = new \WP_Error( 'http_request_failed', $message );
+
+		return $this;
+	}
+
+	public function pending(): int {
+		return count( $this->queue );
+	}
+
+	/**
+	 * Dernière requête.
+	 *
+	 * @return array{method: string, url: string, headers: array<string, string>, body: array<mixed>|null}
+	 * @throws \RuntimeException Aucune requête.
+	 */
+	public function last(): array {
+		if ( array() === $this->requests ) {
+			throw new \RuntimeException( 'No HTTP request was made.' );
+		}
+
+		return $this->requests[ count( $this->requests ) - 1 ];
+	}
+
+	/**
+	 * Filtre pre_http_request.
+	 *
+	 * @param mixed                $preempt Valeur actuelle.
+	 * @param array<string, mixed> $args    Arguments de la requête.
+	 * @param string               $url     URL.
+	 * @return array<string, mixed>|\WP_Error
+	 * @throws \RuntimeException Requête inattendue.
+	 */
+	public function handle( $preempt, $args, $url ) {
+		// Requêtes d'autres extensions (WooCommerce…) : réponse vide, jamais de réseau ; seule l'API est simulée et enregistrée.
+		if ( false === strpos( (string) $url, '/api/V2/' ) ) {
+			return array(
+				'headers'  => array(),
+				'body'     => '{}',
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'cookies'  => array(),
+				'filename' => null,
+			);
+		}
+		$headers = array();
+		foreach ( (array) ( $args['headers'] ?? array() ) as $name => $value ) {
+			$headers[ strtolower( (string) $name ) ] = (string) $value;
+		}
+		$body             = isset( $args['body'] ) && is_string( $args['body'] ) ? json_decode( $args['body'], true ) : null;
+		$this->requests[] = array(
+			'method'  => (string) ( $args['method'] ?? 'GET' ),
+			'url'     => (string) $url,
+			'headers' => $headers,
+			'body'    => is_array( $body ) ? $body : null,
+		);
+
+		$response = array_shift( $this->queue );
+		if ( null === $response ) {
+			throw new \RuntimeException( 'Unexpected HTTP request: ' . esc_url_raw( $url ) );
+		}
+		if ( $response instanceof \WP_Error ) {
+			return $response;
+		}
+
+		return array(
+			'headers'  => $response['headers'],
+			'body'     => is_string( $response['body'] ) ? $response['body'] : (string) wp_json_encode( $response['body'] ),
+			'response' => array(
+				'code'    => $response['status'],
+				'message' => '',
+			),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+	}
+}
