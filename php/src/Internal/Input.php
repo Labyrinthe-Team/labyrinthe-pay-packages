@@ -120,3 +120,125 @@ final class Input
         return $message;
     }
 
+    public static function callbackUrl(?string $url): ?string
+    {
+        if ($url === null || trim($url) === '') {
+            return null;
+        }
+        $url = trim($url);
+        if (!str_starts_with(strtolower($url), 'https://') || filter_var($url, \FILTER_VALIDATE_URL) === false || \strlen($url) > 2048) {
+            throw new InvalidArgumentException('callbackUrl must be a public HTTPS URL (at most 2048 characters).');
+        }
+
+        return $url;
+    }
+
+    /**
+     * @param array<array-key, mixed>|null $metadata
+     *
+     * @return array<string, string|null>|null
+     */
+    public static function metadata(?array $metadata): ?array
+    {
+        if ($metadata === null) {
+            return null;
+        }
+        if (\count($metadata) > self::MAX_METADATA_ENTRIES) {
+            throw new InvalidArgumentException(\sprintf('metadata accepts at most %d entries.', self::MAX_METADATA_ENTRIES));
+        }
+        $result = [];
+        foreach ($metadata as $key => $value) {
+            if ($value !== null && !\is_string($value) && !\is_int($value) && !\is_float($value) && !\is_bool($value)) {
+                throw new InvalidArgumentException(\sprintf('metadata["%s"] must be a string.', $key));
+            }
+            $value = match (true) {
+                $value === null => null,
+                \is_bool($value) => $value ? 'true' : 'false',
+                default => (string) $value,
+            };
+            if ($value !== null && mb_strlen($value) > self::MAX_METADATA_VALUE_LENGTH) {
+                throw new InvalidArgumentException(\sprintf('metadata["%s"] must be at most %d characters.', $key, self::MAX_METADATA_VALUE_LENGTH));
+            }
+            $result[(string) $key] = $value;
+        }
+
+        return $result;
+    }
+
+    public static function id(string $id, string $field = 'id'): string
+    {
+        $id = trim($id);
+        if ($id === '' || \strlen($id) > 64) {
+            throw new InvalidArgumentException(\sprintf('%s must be a LabPay identifier, e.g. "DEP-01JCX…".', $field));
+        }
+
+        return $id;
+    }
+
+    public static function perPage(?int $perPage): ?int
+    {
+        if ($perPage !== null && ($perPage < 1 || $perPage > self::MAX_PER_PAGE)) {
+            throw new InvalidArgumentException(\sprintf('perPage must be between 1 and %d.', self::MAX_PER_PAGE));
+        }
+
+        return $perPage;
+    }
+
+    public static function page(?int $page): ?int
+    {
+        if ($page !== null && $page < 1) {
+            throw new InvalidArgumentException('page must be 1 or more.');
+        }
+
+        return $page;
+    }
+
+    public static function date(\DateTimeInterface|string|null $date, string $field): ?string
+    {
+        if ($date === null) {
+            return null;
+        }
+        if ($date instanceof \DateTimeInterface) {
+            return $date->format('Y-m-d');
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1) {
+            throw new InvalidArgumentException(\sprintf('%s must be a date in YYYY-MM-DD format.', $field));
+        }
+
+        return $date;
+    }
+
+    public static function status(PaymentStatus|string|null $status): ?string
+    {
+        return self::enum($status, PaymentStatus::class, 'status');
+    }
+
+    public static function operation(Operation|string|null $operation): ?string
+    {
+        return self::enum($operation, Operation::class, 'operation');
+    }
+
+    public static function notificationStatus(NotificationStatus|string|null $status): ?string
+    {
+        return self::enum($status, NotificationStatus::class, 'status');
+    }
+
+    /**
+     * @template T of PaymentStatus|Operation|NotificationStatus
+     *
+     * @param T|string|null   $value
+     * @param class-string<T> $enum
+     */
+    private static function enum(\BackedEnum|string|null $value, string $enum, string $field): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $case = $value instanceof \BackedEnum ? $value : $enum::tryFrom($value);
+        if ($case === null || $case->value === 'unknown') {
+            throw new InvalidArgumentException(\sprintf('Invalid %s filter.', $field));
+        }
+
+        return $case->value;
+    }
+}
