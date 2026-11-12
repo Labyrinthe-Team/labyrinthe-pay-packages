@@ -195,3 +195,199 @@ public final class LabPayClient {
    * Countries, providers, availability, provider prediction.
    *
    * @return the provider service
+   */
+  public ProviderService providers() {
+    return providers;
+  }
+
+  /**
+   * Account, balances, key and secret rotations.
+   *
+   * @return the account service
+   */
+  public AccountService account() {
+    return account;
+  }
+
+  /**
+   * Notification history and resend.
+   *
+   * @return the notification service
+   */
+  public NotificationService notifications() {
+    return notifications;
+  }
+
+  /**
+   * Whether this client uses a test key ({@code test_…}): sandbox, no real money, separate
+   * balances.
+   *
+   * @return true in test mode
+   */
+  public boolean isTestMode() {
+    return apiKey.startsWith(TEST_KEY_PREFIX);
+  }
+
+  /**
+   * Base URL of the V2 API used by this client.
+   *
+   * @return e.g. {@code https://api.labyrinthe-rdc.com/api/V2}
+   */
+  public String baseUrl() {
+    return baseUrl;
+  }
+
+  /**
+   * Status and headers of the last response received (e.g. its {@code X-Labyrinthe-Mode}).
+   *
+   * @return the last response, empty before the first one
+   */
+  public Optional<ResponseInfo> lastResponse() {
+    return Optional.ofNullable(transport.lastResponse());
+  }
+
+  /** The API key is masked. */
+  @Override
+  public String toString() {
+    return "LabPayClient(apiKey="
+        + Redact.apiKey(apiKey)
+        + ", baseUrl="
+        + baseUrl
+        + ", testMode="
+        + isTestMode()
+        + ")";
+  }
+
+  /** Builder of {@link LabPayClient}. Not thread-safe. */
+  public static final class Builder {
+    private String apiKey;
+    private String baseUrl;
+    private Duration timeout = DEFAULT_TIMEOUT;
+    private int maxRetries = DEFAULT_MAX_RETRIES;
+    private Duration maxRetryWait = DEFAULT_MAX_RETRY_WAIT;
+    private boolean autoReference = true;
+    private HttpClient httpClient;
+    private String userAgentSuffix;
+    private UnaryOperator<String> environment = System::getenv;
+    private Transport.Sleeper sleeper = Transport.Sleeper.system();
+
+    private Builder() {}
+
+    /**
+     * Live token or test key ({@code test_…}). Defaults to {@value #ENV_API_KEY}.
+     *
+     * @param apiKey the key (keep it server-side)
+     * @return this builder
+     */
+    public Builder apiKey(String apiKey) {
+      this.apiKey = apiKey;
+      return this;
+    }
+
+    /**
+     * API root, e.g. {@code https://api.labyrinthe-rdc.com/api}; {@code /V2} is added. Defaults to
+     * {@value #ENV_BASE_URL}, then to {@value #DEFAULT_BASE_URL}. A bare host ({@code
+     * http://localhost:8000}) means {@code …/api}; {@code …/api/V2} is accepted too.
+     *
+     * @param baseUrl absolute http(s) URL
+     * @return this builder
+     */
+    public Builder baseUrl(String baseUrl) {
+      this.baseUrl = baseUrl;
+      return this;
+    }
+
+    /**
+     * Timeout of each attempt (default 30 s), also used as connect timeout.
+     *
+     * @param timeout greater than zero
+     * @return this builder
+     */
+    public Builder timeout(Duration timeout) {
+      this.timeout = timeout;
+      return this;
+    }
+
+    /**
+     * Automatic retries, only when they are safe (default {@value #DEFAULT_MAX_RETRIES}; 0 disables
+     * them; max 10).
+     *
+     * @param maxRetries 0 to 10
+     * @return this builder
+     */
+    public Builder maxRetries(int maxRetries) {
+      this.maxRetries = maxRetries;
+      return this;
+    }
+
+    /**
+     * Longest wait accepted before a retry (default 10 s). When the API asks to wait longer ({@code
+     * Retry-After}), the error is thrown instead.
+     *
+     * @param maxRetryWait zero or more
+     * @return this builder
+     */
+    public Builder maxRetryWait(Duration maxRetryWait) {
+      this.maxRetryWait = maxRetryWait;
+      return this;
+    }
+
+    /**
+     * Generate a {@code reference} ({@code sdk_<uuid>}) for payments sent without one, so that they
+     * can be retried without risk of a double payment (default true).
+     *
+     * @param autoReference false to send payments without reference as they are (never retried
+     *     after a network error or a 5xx)
+     * @return this builder
+     */
+    public Builder autoReference(boolean autoReference) {
+      this.autoReference = autoReference;
+      return this;
+    }
+
+    /**
+     * Your own {@link HttpClient} (proxy, TLS, executor…). It must not follow redirects ({@link
+     * HttpClient.Redirect#NEVER}, the default of {@code HttpClient.newBuilder()}).
+     *
+     * @param httpClient the client
+     * @return this builder
+     */
+    public Builder httpClient(HttpClient httpClient) {
+      this.httpClient = httpClient;
+      return this;
+    }
+
+    /**
+     * Appended to the {@code User-Agent} (integrations, e.g. {@code my-shop/2.1}).
+     *
+     * @param userAgentSuffix the suffix
+     * @return this builder
+     */
+    public Builder userAgentSuffix(String userAgentSuffix) {
+      this.userAgentSuffix = userAgentSuffix;
+      return this;
+    }
+
+    /** Variables d'environnement (tests). */
+    Builder environment(UnaryOperator<String> environment) {
+      this.environment = Objects.requireNonNull(environment);
+      return this;
+    }
+
+    /** Attente entre deux tentatives (tests). */
+    Builder sleeper(Transport.Sleeper sleeper) {
+      this.sleeper = Objects.requireNonNull(sleeper);
+      return this;
+    }
+
+    /**
+     * Builds the client.
+     *
+     * @return the client
+     * @throws InvalidArgumentException if an option is invalid or no API key is available
+     */
+    public LabPayClient build() {
+      return new LabPayClient(this);
+    }
+  }
+}
