@@ -56,3 +56,60 @@ public final class LabPayWebhookController {
   public LabPayWebhookController(
       String secret, Duration tolerance, ApplicationEventPublisher publisher) {
     this(secret, tolerance, publisher, Clock.systemUTC());
+  }
+
+  LabPayWebhookController(
+      String secret, Duration tolerance, ApplicationEventPublisher publisher, Clock clock) {
+    this.secrets = split(secret);
+    if (secrets.isEmpty()) {
+      throw new IllegalArgumentException("labpay.webhook.secret cannot be empty.");
+    }
+    this.tolerance = tolerance == null ? Webhooks.DEFAULT_TOLERANCE : tolerance;
+    this.publisher = Objects.requireNonNull(publisher, "publisher");
+    this.clock = Objects.requireNonNull(clock, "clock");
+  }
+
+  private static List<String> split(String secret) {
+    List<String> list = new ArrayList<>();
+    if (secret != null) {
+      for (String part : secret.split(",", -1)) {
+        if (!part.trim().isEmpty()) {
+          list.add(part.trim());
+        }
+      }
+    }
+    return List.copyOf(list);
+  }
+
+  /**
+   * Receives a notification.
+   *
+   * @param body raw request body
+   * @param signature {@code X-Labyrinthe-Signature} header
+   * @return 200 when verified and handled, 400 otherwise
+   */
+  @PostMapping(
+      path = "${labpay.webhook.path:/webhooks/labpay}",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> receive(
+      @RequestBody(required = false) byte[] body,
+      @RequestHeader(name = Webhooks.SIGNATURE_HEADER, required = false) String signature) {
+    WebhookEvent event;
+    try {
+      event =
+          Webhooks.constructEvent(
+              body == null ? new byte[0] : body, signature, secrets, tolerance, clock);
+    } catch (SignatureVerificationException | InvalidWebhookPayloadException e) {
+      return ResponseEntity.badRequest()
+          .contentType(MediaType.APPLICATION_JSON)
+          .body("{\"received\":false,\"error\":\"" + e.code() + "\"}");
+    }
+    publisher.publishEvent(event);
+    return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body("{\"received\":true}");
+  }
+
+  @Override
+  public String toString() {
+    return "LabPayWebhookController(secret=****, tolerance=" + tolerance + ")";
+  }
+}
