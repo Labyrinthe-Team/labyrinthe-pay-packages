@@ -66,3 +66,70 @@ export function customerMessage(value: string | undefined | null): string | unde
 }
 
 export function callbackUrl(value: string | undefined | null): string | undefined {
+  if (value === undefined || value === null || value.trim() === '') return undefined;
+  const url = value.trim();
+  let valid = false;
+  try {
+    valid = new URL(url).protocol === 'https:' && url.length <= 2048;
+  } catch {
+    valid = false;
+  }
+  if (!valid) throw new InvalidArgumentError('callbackUrl must be a public HTTPS URL (at most 2048 characters).');
+  return url;
+}
+
+export function metadata(value: Record<string, unknown> | undefined | null): Record<string, string | null> | undefined {
+  if (value === undefined || value === null) return undefined;
+  const entries = Object.entries(value);
+  if (entries.length > 20) throw new InvalidArgumentError('metadata accepts at most 20 entries.');
+  const result: Record<string, string | null> = {};
+  for (const [key, item] of entries) {
+    if (item === null) {
+      result[key] = null;
+      continue;
+    }
+    if (typeof item !== 'string' && typeof item !== 'number' && typeof item !== 'boolean') {
+      throw new InvalidArgumentError(`metadata["${key}"] must be a string.`);
+    }
+    const text = String(item);
+    if (text.length > 255) throw new InvalidArgumentError(`metadata["${key}"] must be at most 255 characters.`);
+    result[key] = text;
+  }
+  return result;
+}
+
+export function id(value: string, field = 'id'): string {
+  const text = value.trim();
+  if (text === '' || text.length > 64) throw new InvalidArgumentError(`${field} must be a LabPay identifier, e.g. "DEP-01JCX…".`);
+  return encodeURIComponent(text);
+}
+
+export function perPage(value: number | undefined): number | undefined {
+  if (value !== undefined && (!Number.isInteger(value) || value < 1 || value > MAX_PER_PAGE)) {
+    throw new InvalidArgumentError(`perPage must be an integer between 1 and ${MAX_PER_PAGE}.`);
+  }
+  return value;
+}
+
+export function page(value: number | undefined): number | undefined {
+  if (value !== undefined && (!Number.isInteger(value) || value < 1)) throw new InvalidArgumentError('page must be an integer, 1 or more.');
+  return value;
+}
+
+export function date(value: string | Date | undefined, field: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new InvalidArgumentError(`${field} must be a date in YYYY-MM-DD format.`);
+  return value;
+}
+
+export function oneOf<T extends string>(value: string | undefined, allowed: readonly T[], field: string): T | undefined {
+  if (value === undefined) return undefined;
+  if (!(allowed as readonly string[]).includes(value)) throw new InvalidArgumentError(`${field} must be one of: ${allowed.join(', ')}.`);
+  return value as T;
+}
+
+/** Retire les clés `undefined` (exactOptionalPropertyTypes, corps JSON propre). */
+export function compact(object: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(object).filter(([, v]) => v !== undefined));
+}
