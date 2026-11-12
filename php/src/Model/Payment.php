@@ -62,3 +62,66 @@ final class Payment
     /**
      * @param array<mixed> $data
      */
+    public static function fromArray(array $data): self
+    {
+        $failure = Data::nullableArray($data, 'failure');
+
+        return new self(
+            id: Data::string($data, 'id'),
+            reference: Data::nullableString($data, 'reference'),
+            operation: Operation::fromApi(Data::nullableString($data, 'operation')),
+            livemode: Data::bool($data, 'livemode', true),
+            status: PaymentStatus::fromApi(Data::nullableString($data, 'status')),
+            gatewayStatus: Data::nullableString($data, 'gateway_status'),
+            amount: Data::string($data, 'amount'),
+            fee: Data::nullableString($data, 'fee'),
+            totalAmount: Data::nullableString($data, 'total_amount'),
+            currency: Data::string($data, 'currency'),
+            country: Data::nullableString($data, 'country'),
+            phone: Data::nullableString($data, 'phone'),
+            provider: Data::nullableString($data, 'provider'),
+            providerTransactionId: Data::nullableString($data, 'provider_transaction_id'),
+            failure: $failure === null ? null : PaymentFailure::fromArray($failure),
+            metadata: Data::nullableStringMap($data, 'metadata'),
+            createdAt: Data::nullableDateTime($data, 'created_at'),
+            completedAt: Data::nullableDateTime($data, 'completed_at'),
+            refundedAmount: Data::nullableString($data, 'refunded_amount'),
+            refundedPaymentId: Data::nullableString($data, 'refunded_payment_id'),
+            raw: $data,
+        );
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === PaymentStatus::Pending;
+    }
+
+    /** Deposit: your balance is credited. Payout / refund: the money has left. Deliver only on this status. */
+    public function isCompleted(): bool
+    {
+        return $this->status === PaymentStatus::Completed;
+    }
+
+    /** Failed or cancelled; see $failure. Payout / refund: your balance is credited back. */
+    public function isFailed(): bool
+    {
+        return $this->status === PaymentStatus::Failed;
+    }
+
+    /** `completed` or `failed`: the payment will no longer change. */
+    public function isFinal(): bool
+    {
+        return $this->isCompleted() || $this->isFailed();
+    }
+
+    /** A payout queued by the provider (`gateway_status: ENQUEUED`): it can be cancelled. */
+    public function isQueued(): bool
+    {
+        return $this->isPending() && $this->gatewayStatus === 'ENQUEUED';
+    }
+
+    public function isTest(): bool
+    {
+        return !$this->livemode;
+    }
+}
