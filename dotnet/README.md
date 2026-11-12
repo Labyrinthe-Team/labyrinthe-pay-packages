@@ -80,3 +80,84 @@ payment stays in `payment.Raw`. Response amounts are **strings** (`"1500.00"`) �
   reference or call `Payments.FindByReferenceAsync()`. Cancelling your `CancellationToken` throws an
   `OperationCanceledException` and is never retried.
 
+## Errors
+
+All exceptions extend `LabPayException` (`Code`, `StatusCode`). API errors extend `ApiException` (`Errors` per field,
+`Headers`, `RetryAfter`, `Mode`): `AuthenticationException` (401), `PermissionException` (403: `TOKEN_BLOCKED`,
+`MERCHANT_INACTIVE`, `KYC_REQUIRED`, `LIVE_TOKEN_REQUIRED`), `NotFoundException` (404), `ConflictException` (409),
+`InvalidRequestException` (422) with `ValidationException`, `InvalidPhoneNumberException`, `AmountOutOfRangeException`,
+`InsufficientBalanceException`, `RateLimitException` / `DailyLimitReachedException` (429),
+`ServiceUnavailableException` (5xx). SDK errors: `ConnectionException`, `InvalidArgumentException`,
+`UnexpectedResponseException`, `SignatureVerificationException`, `InvalidWebhookPayloadException`. Switch on `Code` or
+on the type, never on the message (in French).
+
+## Notifications (webhooks)
+
+### ASP.NET Core
+
+```csharp
+// appsettings.json: { "LabPay": { "ApiKey": "test_…", "WebhookSecret": "whsec_…" } }
+builder.Services.AddLabPay(builder.Configuration);
+builder.Services.AddLabPayWebhookHandler<PaymentHandler>();
+var app = builder.Build();
+app.MapLabPayWebhooks();                 // POST /webhooks/labpay: raw body verified, then PaymentHandler is called
+
+sealed class PaymentHandler : ILabPayWebhookHandler
+{
+    public Task HandleAsync(WebhookEvent webhookEvent, CancellationToken cancellationToken)
+    {
+        if (webhookEvent.IsPaymentCompleted) { /* deliver webhookEvent.Payment.Reference once */ }
+        return Task.CompletedTask;
+    }
+}
+```
+
+`400` for a bad signature or body, `413` above `WebhookMaxBodySize`, `500` when the handler throws (LabPay delivers it
+again later). `WebhookSecret` accepts several comma-separated secrets; default `LABPAY_WEBHOOK_SECRET`. A complete
+example: [`examples/WebhookMinimalApi`](examples/WebhookMinimalApi/Program.cs).
+
+### Anywhere else
+
+```csharp
+var webhookEvent = Webhook.ConstructEvent(rawBodyBytes, signatureHeader, secret); // RAW body, never re-encoded
+```
+
+Every `v1` of `X-Labyrinthe-Signature` (HMAC-SHA256 of `"<t>.<raw body>"`) is compared in constant time, the timestamp
+must be within 300 s, several secrets are accepted (`ConstructEvent(body, header, new[] { s1, s2 })`), and
+`Webhook.Sign(body, secret)` builds a header for your tests.
+
+## Configuration
+
+```csharp
+new LabPayClientOptions
+{
+    ApiKey = "test_…",                             // or LABPAY_API_KEY
+    BaseUrl = "https://api.labyrinthe-rdc.com/api", // or LABPAY_BASE_URL; "/V2" is added
+    Timeout = TimeSpan.FromSeconds(30),            // per attempt
+    MaxRetries = 2,
+    MaxRetryWait = TimeSpan.FromSeconds(10),
+    AutoReference = true,
+    Logger = LabPayLogger.Create((level, message) => Console.Error.WriteLine(message)),
+};
+```
+
+Pass your own `HttpClient` as second argument of `LabPayClient` (it must not follow redirects). `labpay.LastResponse`
+gives the status and headers of the last response (`Mode` = `X-Labyrinthe-Mode`). Logs never contain the key or query
+values; `ToString()` masks the key, secrets and phone numbers.
+
+Test numbers: see the [PHP README](../php/README.md#test-numbers-sandbox).
+
+## Development
+
+```bash
+dotnet build -c Release          # warnings are errors (.NET analyzers, code style)
+dotnet test                      # xUnit, simulated HttpMessageHandler, ASP.NET Core TestServer, OpenAPI contract
+dotnet format --verify-no-changes
+```
+
+Requires the .NET 8 SDK (`global.json`). **This first draft has not been compiled nor tested**: expect a few build
+fixes on the first `dotnet build`.
+
+## License
+
+MIT — Labyrinthe Innovations SARL. See [LICENSE](LICENSE).
