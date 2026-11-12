@@ -66,3 +66,71 @@ public final class ListNotificationsParams {
    * Page number, or null.
    *
    * @return the page
+   */
+  public Integer page() {
+    return page;
+  }
+
+  /** Builder of {@link ListNotificationsParams}. Not thread-safe. */
+  public static final class Builder {
+    private String paymentId;
+    private NotificationStatus status;
+    private Integer perPage;
+    private Integer page;
+
+    private Builder() {}
+
+    /**
+     * Only the notifications of this payment.
+     *
+     * @param paymentId e.g. {@code DEP-01JCX…}
+     * @return this builder
+     */
+    public Builder paymentId(String paymentId) {
+      this.paymentId = paymentId;
+      return this;
+    }
+
+    /**
+     * Only the notifications with this status.
+     *
+     * @param status the status (not {@code UNKNOWN})
+     * @return this builder
+     */
+    public Builder status(NotificationStatus status) {
+      this.status = status;
+      return this;
+    }
+
+    /**
+     * Page size.
+     *
+     * @param perPage 1 to 100
+     * @return this builder
+     */
+    public Builder perPage(Integer perPage) {
+      this.perPage = perPage;
+      return this;
+    }
+
+    /**
+     * Page number.
+     *
+     * @param page 1 or more
+     * @return this builder
+     */
+    public Builder page(Integer page) {
+      this.page = page;
+      return this;
+    }
+
+    /**
+     * Builds the parameters.
+     *
+     * @return the parameters
+     */
+    public ListNotificationsParams build() {
+      return new ListNotificationsParams(this);
+    }
+  }
+}
