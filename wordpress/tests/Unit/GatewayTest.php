@@ -116,3 +116,121 @@ final class GatewayTest extends TestCase {
 			)
 		);
 		$_POST['labpay_phone'] = '0813456789';
+
+		$result = $this->gateway()->process_payment( $order->get_id() );
+
+		$this->assertSame( 'success', $result['result'] );
+		$order = wc_get_order( $order->get_id() );
+		$this->assertTrue( $order->is_paid() );
+		$this->assertSame( 'DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6', $order->get_transaction_id() );
+		$this->assertStringContainsString( 'MP123', implode( "\n", self::notes( $order ) ) );
+	}
+
+	public function test_refused_payment_fails_and_the_next_attempt_uses_a_new_reference(): void {
+		$this->configure();
+		$order = $this->order();
+		$this->http->push(
+			422,
+			array(
+				'data' => self::api_payment(
+					array(
+						'status'  => 'failed',
+						'failure' => array(
+							'code'    => 'INSUFFICIENT_FUNDS',
+							'message' => 'Solde insuffisant',
+						),
+					)
+				),
+			)
+		);
+		$_POST['labpay_phone'] = '0813456789';
+
+		$result = $this->gateway()->process_payment( $order->get_id() );
+
+		$this->assertSame( 'failure', $result['result'] );
+		$this->assertSame( 1, wc_notice_count( 'error' ) );
+		$order = wc_get_order( $order->get_id() );
+		$this->assertTrue( $order->has_status( 'failed' ) );
+		$this->assertStringContainsString( 'INSUFFICIENT_FUNDS', implode( "\n", self::notes( $order ) ) );
+
+		// Nouvelle tentative : nouvelle référence (la première est définitivement échouée).
+		$this->http->push( 201, array( 'data' => self::api_payment( array( 'id' => 'DEP-SECOND' ) ) ) );
+		$result = $this->gateway()->process_payment( $order->get_id() );
+
+		$this->assertSame( 'success', $result['result'] );
+		$this->assertSame( 'WC-' . $order->get_id() . '-2', $this->http->last()['body']['reference'] );
+		$order = wc_get_order( $order->get_id() );
+		$this->assertSame( array( 'DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6', 'DEP-SECOND' ), $order->get_meta( Order_Payments::META_PAYMENT_IDS ) );
+	}
+
+	public function test_network_error_keeps_the_same_reference_for_the_retry(): void {
+		$this->configure();
+		$order = $this->order();
+		// Le SDK relance une fois (référence fournie : sans risque), puis abandonne.
+		$this->http->push_network_error()->push_network_error();
+		$_POST['labpay_phone'] = '0813456789';
+
+		$result = $this->gateway()->process_payment( $order->get_id() );
+
+		$this->assertSame( 'failure', $result['result'] );
+		$this->assertCount( 2, $this->http->requests );
+		$this->assertSame( $this->http->requests[0]['body']['reference'], $this->http->requests[1]['body']['reference'] );
+
+		$this->http->push( 201, array( 'data' => self::api_payment() ) );
+		$this->gateway()->process_payment( $order->get_id() );
+		$this->assertSame( 'WC-' . $order->get_id() . '-1', $this->http->last()['body']['reference'] );
+	}
+
+	public function test_invalid_phone_is_refused_before_any_request(): void {
+		$this->configure();
+		$order = $this->order();
+		$order->set_billing_phone( '' );
+		$order->save();
+		$_POST['labpay_phone'] = 'abc';
+
+		$this->assertFalse( $this->gateway()->validate_fields() );
+		$this->assertSame( 'failure', $this->gateway()->process_payment( $order->get_id() )['result'] );
+		$this->assertCount( 0, $this->http->requests );
+	}
+
+	public function test_api_error_shows_a_customer_message_and_logs_no_secret(): void {
+		$this->configure( array( 'debug' => 'yes' ) );
+		$logged = array();
+		add_filter(
+			'woocommerce_logger_log_message',
+			static function ( $message ) use ( &$logged ) {
+				$logged[] = $message;
+
+				return $message;
+			}
+		);
+		$order = $this->order();
+		$this->http->push_error( 422, 'INVALID_PHONE_NUMBER' );
+		$_POST['labpay_phone'] = '0813456789';
+
+		$result = $this->gateway()->process_payment( $order->get_id() );
+
+		$this->assertSame( 'failure', $result['result'] );
+		$notices = wc_get_notices( 'error' );
+		$this->assertStringContainsString( 'not valid', $notices[0]['notice'] );
+		$this->assertNotEmpty( $logged );
+		$all = implode( "\n", $logged );
+		$this->assertStringContainsString( 'INVALID_PHONE_NUMBER', $all );
+		$this->assertStringNotContainsString( self::TEST_KEY, $all );
+		$this->assertStringNotContainsString( '0813456789', $all, 'phone numbers are masked' );
+	}
+
+	public function test_live_mode_uses_the_live_token(): void {
+		$this->configure( array( 'testmode' => 'no' ) );
+		$order = $this->order();
+		$this->http->push( 201, array( 'data' => self::api_payment( array( 'livemode' => true ) ) ) );
+		$_POST['labpay_phone'] = '+243813456789';
+
+		$this->gateway()->process_payment( $order->get_id() );
+
+		$this->assertSame( 'Bearer ' . self::LIVE_TOKEN, $this->http->last()['headers']['authorization'] );
+		$this->assertSame( '+243813456789', $this->http->last()['body']['phone'] );
+		$this->assertSame( 'live', wc_get_order( $order->get_id() )->get_meta( Order_Payments::META_MODE ) );
+		$this->assertSame( 'live', ( new Settings() )->mode() );
+	}
+}
