@@ -139,3 +139,144 @@ public final class ListPaymentsParams {
     return to;
   }
 
+  /**
+   * Page size, or null (API default: 20).
+   *
+   * @return the size
+   */
+  public Integer perPage() {
+    return perPage;
+  }
+
+  /**
+   * Page number, or null (first page).
+   *
+   * @return the page
+   */
+  public Integer page() {
+    return page;
+  }
+
+  /** Builder of {@link ListPaymentsParams}. Not thread-safe. */
+  public static final class Builder {
+    private PaymentStatus status;
+    private Operation operation;
+    private String currency;
+    private String country;
+    private String reference;
+    private LocalDate from;
+    private LocalDate to;
+    private Integer perPage;
+    private Integer page;
+
+    private Builder() {}
+
+    /**
+     * Only payments with this status.
+     *
+     * @param status the status (not {@code UNKNOWN})
+     * @return this builder
+     */
+    public Builder status(PaymentStatus status) {
+      this.status = status;
+      return this;
+    }
+
+    /**
+     * Only payments of this kind.
+     *
+     * @param operation the operation (not {@code UNKNOWN})
+     * @return this builder
+     */
+    public Builder operation(Operation operation) {
+      this.operation = operation;
+      return this;
+    }
+
+    /**
+     * Only payments in this currency.
+     *
+     * @param currency e.g. {@code CDF}
+     * @return this builder
+     */
+    public Builder currency(String currency) {
+      this.currency = currency;
+      return this;
+    }
+
+    /**
+     * Only payments in this country.
+     *
+     * @param country ISO alpha-3, e.g. {@code COD}
+     * @return this builder
+     */
+    public Builder country(String country) {
+      this.country = country;
+      return this;
+    }
+
+    /**
+     * Only the payment carrying this reference.
+     *
+     * @param reference your reference
+     * @return this builder
+     */
+    public Builder reference(String reference) {
+      this.reference = reference;
+      return this;
+    }
+
+    /**
+     * Created on or after this date.
+     *
+     * @param from the date
+     * @return this builder
+     */
+    public Builder from(LocalDate from) {
+      this.from = from;
+      return this;
+    }
+
+    /**
+     * Created on or before this date (not before {@code from}).
+     *
+     * @param to the date
+     * @return this builder
+     */
+    public Builder to(LocalDate to) {
+      this.to = to;
+      return this;
+    }
+
+    /**
+     * Page size.
+     *
+     * @param perPage 1 to 100
+     * @return this builder
+     */
+    public Builder perPage(Integer perPage) {
+      this.perPage = perPage;
+      return this;
+    }
+
+    /**
+     * Page number.
+     *
+     * @param page 1 or more
+     * @return this builder
+     */
+    public Builder page(Integer page) {
+      this.page = page;
+      return this;
+    }
+
+    /**
+     * Builds the parameters.
+     *
+     * @return the parameters
+     */
+    public ListPaymentsParams build() {
+      return new ListPaymentsParams(this);
+    }
+  }
+}
