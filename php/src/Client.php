@@ -117,3 +117,121 @@ final class Client
             requestFactory: $requestFactory ?? $factory,
             streamFactory: $streamFactory ?? $factory,
             maxRetries: $maxRetries,
+            maxRetryWait: $maxRetryWait,
+            sleeper: $sleeper ?? new NativeSleeper(),
+            logger: $logger ?? new NullLogger(),
+            userAgent: self::userAgent($userAgentSuffix),
+        );
+
+        $this->deposits = new DepositService($transport, $autoReference);
+        $this->payouts = new PayoutService($transport, $autoReference);
+        $this->refunds = new RefundService($transport, $autoReference);
+        $this->payments = new PaymentService($transport);
+        $this->providers = new ProviderService($transport);
+        $this->account = new AccountService($transport);
+        $this->notifications = new NotificationService($transport);
+    }
+
+    /**
+     * Builds a client from LABPAY_API_KEY and, optionally, LABPAY_BASE_URL.
+     *
+     * @throws InvalidArgumentException when LABPAY_API_KEY is not set
+     */
+    public static function fromEnv(
+        float $timeout = 30.0,
+        int $maxRetries = 2,
+        ?ClientInterface $httpClient = null,
+        ?LoggerInterface $logger = null,
+    ): self {
+        $apiKey = self::env('LABPAY_API_KEY');
+        if ($apiKey === null) {
+            throw new InvalidArgumentException('The LABPAY_API_KEY environment variable is not set.');
+        }
+
+        return new self(
+            apiKey: $apiKey,
+            baseUrl: self::env('LABPAY_BASE_URL'),
+            timeout: $timeout,
+            maxRetries: $maxRetries,
+            httpClient: $httpClient,
+            logger: $logger,
+        );
+    }
+
+    /** True with a test key (`test_…`): sandbox, no real money, separate balances. */
+    public function isTestMode(): bool
+    {
+        return str_starts_with($this->apiKey, self::TEST_KEY_PREFIX);
+    }
+
+    /** Base URL of the V2 API, e.g. "https://api.labyrinthe-rdc.com/api/V2". */
+    public function baseUrl(): string
+    {
+        return $this->baseUrl;
+    }
+
+    /**
+     * Status and headers of the last HTTP response received by this client
+     * (success or error), e.g. its X-Labyrinthe-Mode. Null before the first response.
+     *
+     * @phpstan-impure
+     */
+    public function lastResponse(): ?ResponseInfo
+    {
+        return $this->transport->lastResponse();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'apiKey' => Redactor::apiKey($this->apiKey),
+            'baseUrl' => $this->baseUrl,
+            'testMode' => $this->isTestMode(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __serialize(): array
+    {
+        throw new \LogicException('The LabPay client cannot be serialized (it holds the API key).');
+    }
+
+    private static function normalizeBaseUrl(string $baseUrl): string
+    {
+        $baseUrl = rtrim(trim($baseUrl), '/');
+        $parts = parse_url($baseUrl);
+        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !\in_array(strtolower($parts['scheme']), ['http', 'https'], true)) {
+            throw new InvalidArgumentException('baseUrl must be an absolute http(s) URL, e.g. https://api.labyrinthe-rdc.com/api.');
+        }
+
+        // A bare host ("http://localhost:8000") points to the root of the backend.
+        if (($parts['path'] ?? '') === '') {
+            $baseUrl .= self::API_PATH;
+        }
+        // "…/api/V2" is accepted as well as "…/api".
+        if (strcasecmp(substr($baseUrl, -\strlen(self::VERSION_PATH)), self::VERSION_PATH) === 0) {
+            $baseUrl = substr($baseUrl, 0, -\strlen(self::VERSION_PATH));
+        }
+
+        return $baseUrl.self::VERSION_PATH;
+    }
+
+    private static function userAgent(?string $suffix): string
+    {
+        $userAgent = \sprintf('labpay-php/%s PHP/%s', Version::SDK, \PHP_VERSION);
+
+        return $suffix === null || trim($suffix) === '' ? $userAgent : $userAgent.' '.trim($suffix);
+    }
+
+    private static function env(string $name): ?string
+    {
+        $value = $_ENV[$name] ?? $_SERVER[$name] ?? getenv($name);
+
+        return \is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+}
