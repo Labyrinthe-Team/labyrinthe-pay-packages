@@ -435,3 +435,440 @@ paths:
       description: A new notification (same event, same URL, up-to-date payment) is created and delivered; history is kept.
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        '202':
+          description: The new notification.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Notification' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+webhooks:
+  payment.finalized:
+    post:
+      summary: Final status of a payment, sent to its `callback_url`
+      description: |
+        Sent once the payment reaches `completed` or `failed`. Answer `2xx` within 10 seconds; otherwise retried
+        after 1, 5, 15, 60 and 240 minutes, then abandoned (it can be resent with `POST /notifications/{id}/resend`).
+        The same notification can arrive more than once: deduplicate on `X-Labyrinthe-Delivery` or `payment.id`.
+
+        **Signature**: `X-Labyrinthe-Signature: t=<timestamp>,v1=<hex>`, where `v1` is the HMAC-SHA256 of
+        `"<timestamp>.<raw body>"` keyed with the signing secret (`whsec_…`, `GET /account` with the live token).
+        For 24 h after a rotation, a second `v1` signed with the previous secret is added.
+      parameters:
+        - { name: X-Labyrinthe-Event, in: header, required: true, schema: { $ref: '#/components/schemas/WebhookEventType' } }
+        - { name: X-Labyrinthe-Delivery, in: header, required: true, description: Notification id, schema: { type: string } }
+        - { name: X-Labyrinthe-Mode, in: header, required: true, schema: { $ref: '#/components/schemas/Mode' } }
+        - { name: X-Labyrinthe-Signature, in: header, required: true, schema: { type: string, example: 't=1794391243,v1=5d41402abc4b2a76b9719d911017c592…' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebhookNotification' }
+      responses:
+        '200': { description: Acknowledged (any 2xx). }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Live token, or test key (`test_…`) for the sandbox.
+    apiToken:
+      type: apiKey
+      in: header
+      name: X-Api-Token
+      description: Alternative to `Authorization`.
+
+  parameters:
+    PaymentId:
+      name: id
+      in: path
+      required: true
+      description: LabPay identifier (`DEP-…`, `PAY-…`, `RFD-…`).
+      schema: { type: string, maxLength: 64 }
+    PerPage:
+      name: per_page
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1 }
+
+  headers:
+    Mode:
+      description: Mode of the key used.
+      schema: { $ref: '#/components/schemas/Mode' }
+    RetryAfter:
+      description: Seconds to wait before retrying.
+      schema: { type: integer }
+
+  responses:
+    Payment:
+      description: The payment.
+      headers: { X-Labyrinthe-Mode: { $ref: '#/components/headers/Mode' } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PaymentEnvelope' }
+    PaymentAccepted:
+      description: Accepted, awaiting the final status (or resend of a pending `reference`).
+      headers: { X-Labyrinthe-Mode: { $ref: '#/components/headers/Mode' } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PaymentEnvelope' }
+    PaymentUnknown:
+      description: 'Unknown aggregator answer (`gateway_status: UNKNOWN`). The payment stays `pending` and its status is re-read automatically. Not a failure.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PaymentEnvelope' }
+    PaymentAlreadyCompleted:
+      description: The `reference` was already used by a completed payment, which is returned.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PaymentEnvelope' }
+    PaymentRefusedOrInvalid:
+      description: |
+        Either the payment was refused at initiation — it was recorded and is returned in `data` with
+        `status: failed` and `failure` — or the request is invalid (`VALIDATION_ERROR`, `INVALID_PHONE_NUMBER`,
+        `UNSUPPORTED_COUNTRY`, `INVALID_CURRENCY`, `UNSUPPORTED_PROVIDER`, `INVALID_AMOUNT`, `AMOUNT_TOO_SMALL`,
+        `AMOUNT_TOO_LARGE`, `AMOUNT_OUT_OF_BOUNDS`, `INSUFFICIENT_BALANCE`).
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/PaymentEnvelope'
+              - $ref: '#/components/schemas/Error'
+    Unauthenticated:
+      description: Missing or invalid token (`UNAUTHENTICATED`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { message: 'Token API manquant ou invalide. Envoyez-le dans l''en-tête Authorization: Bearer <token>.', code: UNAUTHENTICATED }
+    Forbidden:
+      description: '`TOKEN_BLOCKED`, `MERCHANT_INACTIVE`, `KYC_REQUIRED` or `LIVE_TOKEN_REQUIRED`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: '`PAYMENT_NOT_FOUND`, `DEPOSIT_NOT_FOUND` or `NOTIFICATION_NOT_FOUND`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: '`NOT_A_PAYOUT`, `NOT_CANCELLABLE`, `DEPOSIT_NOT_COMPLETED`, `REFUND_IN_PROGRESS` or `DEPOSIT_ALREADY_REFUNDED`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Invalid parameters. On `GET /providers`, `/availability` and `/notifications` the body has no `code`.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: 'Rate limit (`{ "message": "Too Many Attempts." }`, no `code`) or `DAILY_LIMIT_REACHED`.'
+      headers: { Retry-After: { $ref: '#/components/headers/RetryAfter' } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ServiceUnavailable:
+      description: '`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Amount:
+      description: Positive amount with at most 2 decimals. Numbers are accepted and converted to strings.
+      oneOf:
+        - { type: string, pattern: '^\d{1,16}(\.\d{1,2})?$' }
+        - { type: number, exclusiveMinimum: 0 }
+    Money:
+      type: string
+      description: Amount with 2 decimals.
+      pattern: '^-?\d+\.\d{2}$'
+      example: '1000.00'
+    PaymentStatus:
+      type: string
+      enum: [pending, completed, failed]
+    Operation:
+      type: string
+      enum: [deposit, payout, refund]
+    Mode:
+      type: string
+      enum: [live, test]
+    NotificationStatus:
+      type: string
+      enum: [delivered, pending, abandoned]
+    WebhookEventType:
+      type: string
+      enum: [payment.completed, payment.failed]
+    AvailabilityStatus:
+      type: string
+      enum: [OPERATIONAL, DELAYED, CLOSED]
+    Metadata:
+      type: object
+      maxProperties: 20
+      additionalProperties: { type: [string, 'null'], maxLength: 255 }
+
+    MobileMoneyRequest:
+      type: object
+      required: [amount, currency, phone]
+      properties:
+        amount: { $ref: '#/components/schemas/Amount' }
+        currency: { type: string, description: 'Currency of an open country (CDF, USD), checked against the number''s country.', example: CDF }
+        phone: { type: string, maxLength: 20, description: 'Local number of the default country (0812345678) or international (+243812345678).' }
+        country: { type: string, pattern: '^[A-Za-z]{3}$', description: 'Without it: local number = DR Congo, international number = country of the dial code.' }
+        provider: { type: string, maxLength: 64, pattern: '^[A-Za-z0-9_]+$', description: Inferred from the number when absent. }
+        reference: { type: string, maxLength: 100, pattern: '^[A-Za-z0-9._:\-]+$', description: Unique per token and mode (idempotency). }
+        callback_url: { type: string, format: uri, maxLength: 2048, description: Public HTTPS address (private or local addresses are refused). }
+        customer_message: { type: string, pattern: '^[A-Za-z0-9 ]{4,22}$', description: Text shown to the customer, depending on the provider. }
+        metadata: { $ref: '#/components/schemas/Metadata' }
+
+    RefundRequest:
+      type: object
+      required: [payment_id]
+      properties:
+        payment_id: { type: string, maxLength: 64, description: '`id` of the deposit to refund (`DEP-…`).' }
+        amount: { $ref: '#/components/schemas/Amount', description: 'Default: everything left to refund.' }
+        reference: { type: string, maxLength: 100, pattern: '^[A-Za-z0-9._:\-]+$' }
+        callback_url: { type: string, format: uri, maxLength: 2048 }
+        metadata: { $ref: '#/components/schemas/Metadata' }
+
+    Payment:
+      type: object
+      description: Same object in responses and notifications (`PaymentPresenter`).
+      required: [id, reference, operation, livemode, status, gateway_status, amount, fee, total_amount, currency, country, phone, provider, provider_transaction_id, failure, metadata, created_at, completed_at]
+      properties:
+        id: { type: string, description: '`DEP-…` (deposit), `PAY-…` (payout), `RFD-…` (refund).', example: DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6 }
+        reference: { type: [string, 'null'] }
+        operation: { $ref: '#/components/schemas/Operation' }
+        livemode: { type: boolean, description: false for a test payment. }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+        gateway_status: { type: [string, 'null'], description: 'Raw aggregator status, informational (e.g. ACCEPTED, ENQUEUED, UNKNOWN).' }
+        amount: { $ref: '#/components/schemas/Money' }
+        fee: { type: [string, 'null'] }
+        total_amount: { type: [string, 'null'], description: 'Deposit: paid by the customer. Payout: debited from the merchant balance.' }
+        currency: { type: string }
+        country: { type: [string, 'null'], description: ISO 3166-1 alpha-3. }
+        phone: { type: [string, 'null'], description: Local format of the country. }
+        provider: { type: [string, 'null'], example: VODACOM_MPESA_COD }
+        provider_transaction_id: { type: [string, 'null'] }
+        failure:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [code, message]
+              properties:
+                code: { type: string }
+                message: { type: [string, 'null'] }
+        metadata:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/Metadata'
+        created_at: { type: [string, 'null'], format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+        refunded_amount: { type: string, description: Deposits only — refunded or being refunded. }
+        refunded_payment_id: { type: [string, 'null'], description: Refunds only — id of the refunded deposit. }
+      example:
+        id: DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6
+        reference: ORDER-42
+        operation: deposit
+        livemode: false
+        status: pending
+        gateway_status: ACCEPTED
+        amount: '1000.00'
+        fee: '35.00'
+        total_amount: '1035.00'
+        currency: CDF
+        country: COD
+        phone: '0813456789'
+        provider: VODACOM_MPESA_COD
+        provider_transaction_id: null
+        failure: null
+        metadata: { orderId: '42' }
+        created_at: '2026-11-11T10:00:00+00:00'
+        completed_at: null
+        refunded_amount: '0.00'
+
+    PaymentEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data: { $ref: '#/components/schemas/Payment' }
+
+    PaginationMeta:
+      type: object
+      required: [current_page, last_page, per_page, total]
+      properties:
+        current_page: { type: integer }
+        last_page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+    PaginationLinks:
+      type: object
+      properties:
+        first: { type: [string, 'null'] }
+        last: { type: [string, 'null'] }
+        prev: { type: [string, 'null'] }
+        next: { type: [string, 'null'] }
+
+    Balance:
+      type: object
+      required: [currency, balance, updated_at]
+      properties:
+        currency: { type: string }
+        balance: { $ref: '#/components/schemas/Money' }
+        updated_at: { type: [string, 'null'], format: date-time }
+
+    Account:
+      type: object
+      required: [mode, live_enabled, kyc_verified, fees]
+      properties:
+        mode: { $ref: '#/components/schemas/Mode' }
+        merchant: { type: string }
+        live_enabled: { type: boolean, description: 'false: live collections have a daily limit (DAILY_LIMIT_REACHED).' }
+        kyc_verified: { type: boolean }
+        fees:
+          type: object
+          required: [deposit_rate, payout_rate]
+          properties:
+            deposit_rate: { type: string, description: Between 0 and 1, example: '0.0350' }
+            payout_rate: { type: string, example: '0.0350' }
+        test_key: { type: string }
+        webhook_secret: { type: string, description: Live token only (absent with the test key). }
+        webhook_secret_previous_expires_at: { type: string, format: date-time, description: During a rotation only. }
+
+    AmountLimits:
+      type: object
+      properties:
+        min_amount: { type: [string, 'null'] }
+        max_amount: { type: [string, 'null'] }
+
+    Country:
+      type: object
+      required: [country, name, dial_code, currencies, limits, default]
+      properties:
+        country: { type: string, example: COD }
+        name: { type: string }
+        dial_code: { type: string, example: '243' }
+        currencies: { type: array, items: { type: string } }
+        limits:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/AmountLimits' }
+        default: { type: boolean, description: Country of a local number sent without `country`. }
+
+    Provider:
+      type: object
+      required: [provider, country, name, currencies]
+      properties:
+        provider: { type: string, example: VODACOM_MPESA_COD }
+        country: { type: [string, 'null'] }
+        name: { type: string }
+        name_displayed_to_customer: { type: [string, 'null'] }
+        logo: { type: [string, 'null'] }
+        currencies:
+          type: object
+          description: Rules per currency for the requested operation (PHP encodes an empty object as `[]`).
+          additionalProperties:
+            type: object
+            properties:
+              min_amount: { type: [string, number, 'null'] }
+              max_amount: { type: [string, number, 'null'] }
+              decimals: { type: [string, 'null'], example: NONE }
+              status: { type: [string, 'null'] }
+              pin_prompt: {}
+              pin_prompt_revivable: {}
+              pin_prompt_instructions: {}
+
+    ProviderAvailability:
+      type: object
+      description: '`country` plus one status per operation type (`DEPOSIT`, `PAYOUT`…).'
+      properties:
+        country: { type: [string, 'null'] }
+      additionalProperties:
+        oneOf:
+          - $ref: '#/components/schemas/AvailabilityStatus'
+          - type: string
+          - type: 'null'
+
+    Notification:
+      type: object
+      required: [id, event, payment_id, url, status, attempts, last_status_code, last_error, next_attempt_at, delivered_at, created_at]
+      properties:
+        id: { type: integer, description: Also the `X-Labyrinthe-Delivery` header. }
+        event: { $ref: '#/components/schemas/WebhookEventType' }
+        payment_id: { type: [string, 'null'] }
+        url: { type: string }
+        status: { $ref: '#/components/schemas/NotificationStatus' }
+        attempts: { type: integer }
+        last_status_code: { type: [integer, 'null'] }
+        last_error: { type: [string, 'null'] }
+        next_attempt_at: { type: [string, 'null'], format: date-time }
+        delivered_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: [string, 'null'], format: date-time }
+
+    WebhookNotification:
+      type: object
+      required: [event, payment, sent_at]
+      properties:
+        event: { $ref: '#/components/schemas/WebhookEventType' }
+        payment: { $ref: '#/components/schemas/Payment' }
+        sent_at: { type: string, format: date-time }
+
+    ErrorCode:
+      type: string
+      description: Open list — accept unknown codes.
+      enum:
+        - UNAUTHENTICATED
+        - TOKEN_BLOCKED
+        - MERCHANT_INACTIVE
+        - KYC_REQUIRED
+        - LIVE_TOKEN_REQUIRED
+        - PAYMENT_NOT_FOUND
+        - DEPOSIT_NOT_FOUND
+        - NOTIFICATION_NOT_FOUND
+        - NOT_A_PAYOUT
+        - NOT_CANCELLABLE
+        - DEPOSIT_NOT_COMPLETED
+        - REFUND_IN_PROGRESS
+        - DEPOSIT_ALREADY_REFUNDED
+        - VALIDATION_ERROR
+        - INVALID_PHONE_NUMBER
+        - UNSUPPORTED_COUNTRY
+        - INVALID_CURRENCY
+        - UNSUPPORTED_PROVIDER
+        - INVALID_AMOUNT
+        - AMOUNT_TOO_SMALL
+        - AMOUNT_TOO_LARGE
+        - AMOUNT_OUT_OF_BOUNDS
+        - INSUFFICIENT_BALANCE
+        - DAILY_LIMIT_REACHED
+        - MAINTENANCE
+        - API_DISABLED
+        - DEPOSITS_DISABLED
+        - WITHDRAWALS_DISABLED
+        - PROVIDER_TEMPORARILY_UNAVAILABLE
+        - GATEWAY_UNAVAILABLE
+        - V2_DISABLED
+        - TEST_MODE_DISABLED
+
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string, description: In French, may change. Rely on `code`. }
+        code:
+          anyOf:
+            - $ref: '#/components/schemas/ErrorCode'
+            - type: string
+        errors:
+          type: object
+          description: Per-field messages (validation).
+          additionalProperties: { type: array, items: { type: string } }
