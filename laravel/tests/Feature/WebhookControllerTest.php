@@ -54,3 +54,59 @@ final class WebhookControllerTest extends TestCase
         $body = self::notification('payment.failed', 'failed');
 
         $this->deliver($body, Webhook::sign($body, self::SECRET))->assertOk();
+
+        Event::assertDispatched(PaymentFailed::class, static fn (PaymentFailed $e): bool => $e->payment()->failure?->code === 'PAYER_NOT_FOUND');
+        Event::assertNotDispatched(PaymentCompleted::class);
+    }
+
+    public function testEitherSecretIsAcceptedDuringYourRotation(): void
+    {
+        Event::fake();
+        config()->set('labpay.webhook.secret', 'whsec_new, '.self::SECRET);
+        $body = self::notification();
+
+        $this->deliver($body, Webhook::sign($body, self::SECRET))->assertOk();
+        Event::assertDispatched(PaymentCompleted::class);
+    }
+
+    public function testAnInvalidSignatureIsRefused(): void
+    {
+        Event::fake();
+        $body = self::notification();
+
+        $this->deliver($body, Webhook::sign($body, 'whsec_other'))->assertStatus(400);
+        $this->deliver($body, null)->assertStatus(400);
+        $this->deliver(str_replace('1000.00', '9000.00', $body), Webhook::sign($body, self::SECRET))->assertStatus(400);
+        $this->deliver($body, Webhook::sign($body, self::SECRET, time() - 3600))->assertStatus(400);
+
+        Event::assertNotDispatched(WebhookReceived::class);
+    }
+
+    public function testASignedInvalidPayloadIsRefused(): void
+    {
+        $body = '{"event":"payment.completed"}';
+
+        $this->deliver($body, Webhook::sign($body, self::SECRET))->assertStatus(400);
+    }
+
+    public function testAMissingSecretIsAServerError(): void
+    {
+        config()->set('labpay.webhook.secret', null);
+        $body = self::notification();
+
+        $this->deliver($body, Webhook::sign($body, self::SECRET))->assertStatus(500);
+    }
+
+    public function testTheMiddlewareOnACustomRoute(): void
+    {
+        Route::post('custom/labpay', static function (Request $request): string {
+            $event = $request->attributes->get(VerifyLabPaySignature::EVENT);
+
+            return $event instanceof LabPayEvent ? $event->payment->id : 'none';
+        })->middleware('labpay.signature');
+        $body = self::notification();
+
+        $this->deliver($body, Webhook::sign($body, self::SECRET), '/custom/labpay')->assertOk()->assertSee('DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6');
+        $this->deliver($body, 'garbage', '/custom/labpay')->assertStatus(400);
+    }
+}
