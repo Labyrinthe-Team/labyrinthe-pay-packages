@@ -61,3 +61,65 @@ final class ProviderService
         $response = $this->transport->request('GET', '/providers', RetryMode::Safe, query: [
             'operation' => Input::operation($operation),
             'country' => Input::country($country),
+        ]);
+
+        return self::map($response->body, Provider::fromArray(...));
+    }
+
+    /**
+     * Real-time availability per provider code: OPERATIONAL, DELAYED (payouts queued) or CLOSED.
+     *
+     * @return array<string, ProviderAvailability> keyed by provider code
+     *
+     * @throws ApiException
+     * @throws ConnectionException
+     */
+    public function availability(?string $country = null): array
+    {
+        $response = $this->transport->request('GET', '/availability', RetryMode::Safe, query: ['country' => Input::country($country)]);
+
+        $result = [];
+        foreach (Data::optionalArray($response->body, 'data') as $provider => $statuses) {
+            $result[(string) $provider] = ProviderAvailability::fromArray((string) $provider, \is_array($statuses) ? $statuses : []);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Validates a number and predicts its provider, without creating a payment.
+     *
+     * @throws \Labyrinthe\LabPay\Exception\InvalidPhoneNumberException INVALID_PHONE_NUMBER
+     * @throws ApiException                                             UNSUPPORTED_COUNTRY…
+     * @throws ConnectionException
+     */
+    public function predict(string $phone, ?string $country = null): ProviderPrediction
+    {
+        $response = $this->transport->request('POST', '/predict-provider', RetryMode::Safe, body: array_filter([
+            'phone' => Input::phone($phone),
+            'country' => Input::country($country),
+        ], static fn (mixed $v): bool => $v !== null));
+
+        return ProviderPrediction::fromArray($response->data());
+    }
+
+    /**
+     * @template T
+     *
+     * @param array<mixed>               $body
+     * @param callable(array<mixed>): T $map
+     *
+     * @return list<T>
+     */
+    private static function map(array $body, callable $map): array
+    {
+        $items = [];
+        foreach (Data::array($body, 'data') as $item) {
+            if (\is_array($item)) {
+                $items[] = $map($item);
+            }
+        }
+
+        return $items;
+    }
+}
