@@ -210,3 +210,214 @@ public final class Json {
     return (char) value;
   }
 
+  private Object readNumber() {
+    int start = pos;
+    if (peek() == '-') {
+      pos++;
+    }
+    if (peek() == '0') {
+      pos++;
+    } else if (isDigit(peek())) {
+      while (isDigit(peek())) {
+        pos++;
+      }
+    } else {
+      throw error("invalid number");
+    }
+    boolean integral = true;
+    if (peek() == '.') {
+      integral = false;
+      pos++;
+      if (!isDigit(peek())) {
+        throw error("invalid number");
+      }
+      while (isDigit(peek())) {
+        pos++;
+      }
+    }
+    if (peek() == 'e' || peek() == 'E') {
+      integral = false;
+      pos++;
+      if (peek() == '+' || peek() == '-') {
+        pos++;
+      }
+      if (!isDigit(peek())) {
+        throw error("invalid number");
+      }
+      while (isDigit(peek())) {
+        pos++;
+      }
+    }
+    String literal = text.substring(start, pos);
+    if (integral) {
+      BigInteger big = new BigInteger(literal);
+      return big.bitLength() < 64 ? (Object) big.longValue() : big;
+    }
+    return new BigDecimal(literal);
+  }
+
+  private void expectWord(String word) {
+    if (!text.startsWith(word, pos)) {
+      throw error("unexpected literal");
+    }
+    pos += word.length();
+  }
+
+  private void expect(char c) {
+    if (next() != c) {
+      throw error("expected '" + c + "'");
+    }
+  }
+
+  private char peek() {
+    return pos < text.length() ? text.charAt(pos) : '\0';
+  }
+
+  private char next() {
+    if (pos >= text.length()) {
+      throw error("unexpected end of input");
+    }
+    return text.charAt(pos++);
+  }
+
+  private void skipWhitespace() {
+    while (pos < text.length()) {
+      char c = text.charAt(pos);
+      if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
+        return;
+      }
+      pos++;
+    }
+  }
+
+  private static boolean isDigit(char c) {
+    return c >= '0' && c <= '9';
+  }
+
+  private JsonException error(String reason) {
+    // Jamais d'extrait du texte : il peut contenir des données personnelles.
+    return new JsonException("Invalid JSON at offset " + pos + ": " + reason + ".");
+  }
+
+  // -- écriture -----------------------------------------------------------------------------------
+
+  private static void writeValue(StringBuilder out, Object value, int depth) {
+    if (depth > MAX_DEPTH) {
+      throw new JsonException("Cannot encode JSON: nesting too deep.");
+    }
+    if (value == null) {
+      out.append("null");
+    } else if (value instanceof CharSequence) {
+      writeString(out, value.toString());
+    } else if (value instanceof Boolean) {
+      out.append(value.toString());
+    } else if (value instanceof Number) {
+      writeNumber(out, (Number) value);
+    } else if (value instanceof Enum) {
+      writeString(out, value.toString());
+    } else if (value instanceof Map) {
+      out.append('{');
+      boolean first = true;
+      for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+        if (!first) {
+          out.append(',');
+        }
+        first = false;
+        writeString(out, String.valueOf(entry.getKey()));
+        out.append(':');
+        writeValue(out, entry.getValue(), depth + 1);
+      }
+      out.append('}');
+    } else if (value instanceof Iterable) {
+      out.append('[');
+      boolean first = true;
+      for (Object item : (Iterable<?>) value) {
+        if (!first) {
+          out.append(',');
+        }
+        first = false;
+        writeValue(out, item, depth + 1);
+      }
+      out.append(']');
+    } else if (value instanceof Object[]) {
+      writeValue(out, java.util.Arrays.asList((Object[]) value), depth);
+    } else {
+      throw new JsonException("Cannot encode a " + value.getClass().getName() + " as JSON.");
+    }
+  }
+
+  private static void writeNumber(StringBuilder out, Number number) {
+    if (number instanceof Double || number instanceof Float) {
+      double d = number.doubleValue();
+      if (Double.isNaN(d) || Double.isInfinite(d)) {
+        throw new JsonException("Cannot encode NaN or infinity as JSON.");
+      }
+      if (d == Math.rint(d) && Math.abs(d) < 1e15) {
+        out.append((long) d);
+      } else {
+        out.append(d);
+      }
+    } else if (number instanceof BigDecimal) {
+      out.append(((BigDecimal) number).toPlainString());
+    } else {
+      out.append(number.toString());
+    }
+  }
+
+  private static void writeString(StringBuilder out, String s) {
+    out.append('"');
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      switch (c) {
+        case '"':
+          out.append("\\\"");
+          break;
+        case '\\':
+          out.append("\\\\");
+          break;
+        case '\n':
+          out.append("\\n");
+          break;
+        case '\r':
+          out.append("\\r");
+          break;
+        case '\t':
+          out.append("\\t");
+          break;
+        case '\b':
+          out.append("\\b");
+          break;
+        case '\f':
+          out.append("\\f");
+          break;
+        default:
+          if (c < 0x20 || isLoneSurrogate(s, i) || c == ' ' || c == ' ') {
+            out.append(String.format("\\u%04x", (int) c));
+          } else {
+            out.append(c);
+          }
+      }
+    }
+    out.append('"');
+  }
+
+  private static boolean isLoneSurrogate(String s, int i) {
+    char c = s.charAt(i);
+    if (Character.isHighSurrogate(c)) {
+      return i + 1 >= s.length() || !Character.isLowSurrogate(s.charAt(i + 1));
+    }
+    if (Character.isLowSurrogate(c)) {
+      return i == 0 || !Character.isHighSurrogate(s.charAt(i - 1));
+    }
+    return false;
+  }
+
+  /** Erreur de décodage ou d'encodage JSON. */
+  public static final class JsonException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    JsonException(String message) {
+      super(message);
+    }
+  }
+}
