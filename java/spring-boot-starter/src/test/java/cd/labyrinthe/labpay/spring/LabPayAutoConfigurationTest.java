@@ -104,3 +104,108 @@ class LabPayAutoConfigurationTest {
 
   @Test
   void appliesCustomizersAndBacksOffForAUserClient() {
+    runner
+        .withPropertyValues("labpay.api-key=test_spring")
+        .withBean(
+            LabPayClientBuilderCustomizer.class,
+            () -> builder -> builder.baseUrl("https://custom.test"))
+        .run(
+            context ->
+                assertThat(context.getBean(LabPayClient.class).baseUrl())
+                    .isEqualTo("https://custom.test/api/V2"));
+    LabPayClient mine = LabPayClient.builder().apiKey("live_mine_token").build();
+    runner
+        .withPropertyValues("labpay.api-key=test_spring")
+        .withBean(LabPayClient.class, () -> mine)
+        .run(context -> assertThat(context.getBean(LabPayClient.class)).isSameAs(mine));
+  }
+
+  @Test
+  void webhookEndpointOnlyWithASecretInAWebApplication() {
+    assumeTrue(System.getenv("LABPAY_WEBHOOK_SECRET") == null, "LABPAY_WEBHOOK_SECRET is set");
+    web.run(context -> assertThat(context).doesNotHaveBean(LabPayWebhookController.class));
+    web.withPropertyValues("labpay.webhook.secret=" + SECRET, "labpay.webhook.enabled=false")
+        .run(context -> assertThat(context).doesNotHaveBean(LabPayWebhookController.class));
+    runner
+        .withPropertyValues("labpay.webhook.secret=" + SECRET)
+        .run(context -> assertThat(context).doesNotHaveBean(LabPayWebhookController.class));
+    web.withPropertyValues("labpay.webhook.secret=" + SECRET)
+        .run(context -> assertThat(context).hasSingleBean(LabPayWebhookController.class));
+  }
+
+  @Test
+  void verifiesAndPublishesNotifications() {
+    web.withPropertyValues(
+            "labpay.webhook.secret=whsec_other," + SECRET, "labpay.webhook.path=/hooks/labpay")
+        .run(
+            context -> {
+              MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+              Listener listener = context.getBean(Listener.class);
+              long now = Instant.now().getEpochSecond();
+              String body = notification("payment.completed", "completed");
+
+              mvc.perform(
+                      post("/hooks/labpay")
+                          .contentType("application/json")
+                          .header(Webhooks.SIGNATURE_HEADER, sign(body, SECRET, now))
+                          .content(body))
+                  .andExpect(status().isOk())
+                  .andExpect(content().json("{\"received\":true}"));
+              assertThat(listener.events).hasSize(1);
+              WebhookEvent event = listener.events.get(0);
+              assertThat(event.isPaymentCompleted()).isTrue();
+              assertThat(event.payment().status()).isEqualTo(PaymentStatus.COMPLETED);
+
+              // Signature fausse, absente, corps modifié, horodatage expiré : 400, rien de publié.
+              mvc.perform(
+                      post("/hooks/labpay")
+                          .contentType("application/json")
+                          .header(Webhooks.SIGNATURE_HEADER, sign(body, "wrong", now))
+                          .content(body))
+                  .andExpect(status().isBadRequest())
+                  .andExpect(content().json("{\"error\":\"SIGNATURE_VERIFICATION_FAILED\"}"));
+              mvc.perform(post("/hooks/labpay").contentType("application/json").content(body))
+                  .andExpect(status().isBadRequest());
+              mvc.perform(
+                      post("/hooks/labpay")
+                          .contentType("application/json")
+                          .header(Webhooks.SIGNATURE_HEADER, sign(body, SECRET, now))
+                          .content(body.replace("1000.00", "9000.00")))
+                  .andExpect(status().isBadRequest());
+              mvc.perform(
+                      post("/hooks/labpay")
+                          .contentType("application/json")
+                          .header(Webhooks.SIGNATURE_HEADER, sign(body, SECRET, now - 3600))
+                          .content(body))
+                  .andExpect(status().isBadRequest());
+              String notANotification = "[1,2,3]";
+              mvc.perform(
+                      post("/hooks/labpay")
+                          .contentType("application/json")
+                          .header(Webhooks.SIGNATURE_HEADER, sign(notANotification, SECRET, now))
+                          .content(notANotification))
+                  .andExpect(status().isBadRequest())
+                  .andExpect(content().json("{\"error\":\"INVALID_WEBHOOK_PAYLOAD\"}"));
+              assertThat(listener.events).hasSize(1);
+            });
+  }
+
+  @Test
+  void usesTheDefaultPath() {
+    web.withPropertyValues("labpay.webhook.secret=" + SECRET)
+        .run(
+            context -> {
+              MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+              String body = notification("payment.failed", "failed");
+              mvc.perform(
+                      post("/webhooks/labpay")
+                          .contentType("application/json")
+                          .header(
+                              Webhooks.SIGNATURE_HEADER,
+                              sign(body, SECRET, Instant.now().getEpochSecond()))
+                          .content(body))
+                  .andExpect(status().isOk());
+              assertThat(context.getBean(Listener.class).events.get(0).isPaymentFailed()).isTrue();
+            });
+  }
+}
