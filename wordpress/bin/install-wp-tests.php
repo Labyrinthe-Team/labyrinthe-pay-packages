@@ -95,3 +95,99 @@ file_put_contents( "$root/wp-tests-config.php", $config );
 
 echo "WordPress ($wp_version) and WooCommerce ($wc_version) are in .wp-tests/, database `$db_name` is ready.\n";
 
+/**
+ * Télécharge et extrait une archive dans $target (sauf si la même version y est déjà).
+ *
+ * @param string $url      Archive.
+ * @param string $download Dossier de téléchargement (nouveau, vide).
+ * @param string $target   Destination finale.
+ * @param string $top      Dossier racine de l'archive.
+ * @param string $version  Version demandée.
+ */
+function install_zip( string $url, string $download, string $target, string $top, string $version ): void {
+	$marker = "$target/.labpay-version";
+	if ( 'latest' !== $version && is_file( $marker ) && trim( (string) file_get_contents( $marker ) ) === $version ) {
+		return;
+	}
+
+	remove_tree( $download );
+	mkdir( $download, 0777, true );
+	$zip_file = "$download/archive.zip";
+
+	$context = stream_context_create( array( 'http' => array( 'follow_location' => 1, 'timeout' => 300, 'user_agent' => 'labpay-woocommerce-tests' ) ) );
+	$data    = @file_get_contents( $url, false, $context );
+	if ( false === $data || strlen( $data ) < 1000 ) {
+		fail( "Download failed: $url" );
+	}
+	file_put_contents( $zip_file, $data );
+
+	$zip = new ZipArchive();
+	if ( true !== $zip->open( $zip_file ) ) {
+		fail( "Invalid archive: $url" );
+	}
+	$zip->extractTo( "$download/extracted" );
+	$zip->close();
+
+	if ( ! is_dir( "$download/extracted/$top" ) ) {
+		fail( "Unexpected archive layout: $url" );
+	}
+	remove_tree( $target );
+	if ( ! is_dir( dirname( $target ) ) ) {
+		mkdir( dirname( $target ), 0777, true );
+	}
+	rename( "$download/extracted/$top", $target );
+	file_put_contents( $marker, $version );
+	remove_tree( $download );
+}
+
+/**
+ * Copie un dossier récursivement.
+ *
+ * @param string $source Source.
+ * @param string $target Destination.
+ */
+function copy_tree( string $source, string $target ): void {
+	$items = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $source, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::SELF_FIRST );
+	if ( ! is_dir( $target ) ) {
+		mkdir( $target, 0777, true );
+	}
+	foreach ( $items as $item ) {
+		$path = $target . '/' . substr( $item->getPathname(), strlen( $source ) + 1 );
+		if ( $item->isDir() ) {
+			if ( ! is_dir( $path ) ) {
+				mkdir( $path, 0777, true );
+			}
+		} else {
+			copy( $item->getPathname(), $path );
+		}
+	}
+}
+
+/**
+ * Supprime un dossier récursivement.
+ *
+ * @param string $dir Dossier.
+ */
+function remove_tree( string $dir ): void {
+	if ( ! is_dir( $dir ) ) {
+		return;
+	}
+	$items = new RecursiveIteratorIterator(
+		new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ),
+		RecursiveIteratorIterator::CHILD_FIRST
+	);
+	foreach ( $items as $item ) {
+		$item->isDir() && ! $item->isLink() ? rmdir( $item->getPathname() ) : unlink( $item->getPathname() );
+	}
+	rmdir( $dir );
+}
+
+/**
+ * Arrête le script avec un message d'erreur.
+ *
+ * @param string $message Message.
+ */
+function fail( string $message ): never {
+	fwrite( STDERR, $message . "\n" );
+	exit( 1 );
+}
