@@ -1,0 +1,19 @@
+{
+  "name": "@labyrinthe/labpay-postman",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Collection Postman de l'API V2 LabPay, générée depuis openapi/openapi.yaml.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "check": "node scripts/generate.mjs --check",
+    "test": "node --test test/collection.test.mjs",
+    "newman": "node scripts/newman.mjs"
+  },
+  "devDependencies": {
+    "newman": "6.2.3",
+    "openapi-to-postmanv2": "6.4.0",
+    "yaml": "2.9.1"
+  }
+}
