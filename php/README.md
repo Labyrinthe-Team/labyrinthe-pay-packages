@@ -81,3 +81,85 @@ Going live only means switching to the live token. `Client::fromEnv()` reads `LA
 - Never retried after a network error or a 5xx (the request may have been processed): rotations, notification
   resend, payout cancellation, payments without reference.
 - A `ConnectionException` on a payment does **not** mean it failed: resend with the same reference, or use
+  `$labpay->payments->findByReference('ORDER-42')`.
+
+## Errors
+
+Every exception implements `LabPayException`. API errors extend `ApiException` (`getErrorCode()`, `getStatusCode()`,
+`getErrors()` for validation, `getRetryAfter()`, `getMode()`). Switch on the code, never on the message (in French).
+
+| Exception | Codes |
+|---|---|
+| `AuthenticationException` | `UNAUTHENTICATED` (401) |
+| `PermissionException` | `TOKEN_BLOCKED`, `MERCHANT_INACTIVE`, `KYC_REQUIRED`, `LIVE_TOKEN_REQUIRED` (403) |
+| `NotFoundException` | `PAYMENT_NOT_FOUND`, `DEPOSIT_NOT_FOUND`, `NOTIFICATION_NOT_FOUND` (404) |
+| `ConflictException` | `NOT_A_PAYOUT`, `NOT_CANCELLABLE`, `DEPOSIT_NOT_COMPLETED`, `REFUND_IN_PROGRESS`, `DEPOSIT_ALREADY_REFUNDED` (409) |
+| `ValidationException` ⊂ `InvalidRequestException` | `VALIDATION_ERROR` (422) |
+| `InvalidPhoneNumberException` ⊂ `InvalidRequestException` | `INVALID_PHONE_NUMBER` |
+| `AmountOutOfRangeException` ⊂ `InvalidRequestException` | `AMOUNT_TOO_SMALL`, `AMOUNT_TOO_LARGE`, `AMOUNT_OUT_OF_BOUNDS` |
+| `InsufficientBalanceException` ⊂ `InvalidRequestException` | `INSUFFICIENT_BALANCE` |
+| `InvalidRequestException` | `INVALID_CURRENCY`, `UNSUPPORTED_COUNTRY`, `UNSUPPORTED_PROVIDER`, `INVALID_AMOUNT` |
+| `RateLimitException` / `DailyLimitReachedException` | `TOO_MANY_REQUESTS` (set by the SDK) / `DAILY_LIMIT_REACHED` (429) |
+| `ServiceUnavailableException` | `MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED`, `TEST_MODE_DISABLED`, 5xx |
+| `ConnectionException` | network error or timeout (`isTimeout()`) |
+| `InvalidArgumentException` | invalid input, detected before any request |
+
+Unknown codes are thrown as a plain `ApiException` (or the class of their HTTP status).
+
+## Notifications (webhooks)
+
+```php
+use Labyrinthe\LabPay\Webhook\Webhook;
+
+$event = Webhook::constructEvent(
+    file_get_contents('php://input'),                 // RAW body
+    $_SERVER['HTTP_X_LABYRINTHE_SIGNATURE'] ?? '',
+    getenv('LABPAY_WEBHOOK_SECRET'),                  // whsec_… (GET /V2/account with the live token)
+);                                                     // SignatureVerificationException → answer 400
+
+if ($event->isPaymentCompleted()) {
+    // deliver $event->payment->reference, once (deduplicate on X-Labyrinthe-Delivery or $event->payment->id)
+}
+http_response_code(200);                               // within 10 seconds
+```
+
+The signature is `t=<timestamp>,v1=<hex>` where `v1` = HMAC-SHA256 of `"<timestamp>.<raw body>"`. Every `v1` is
+checked in constant time (for 24 h after a rotation LabPay sends two), and the timestamp must be within 300 s. Pass an
+array of secrets during your own rotation. `Webhook::sign($body, $secret)` builds a header to test your endpoint.
+
+## Configuration
+
+```php
+new Client(
+    apiKey: 'test_…',
+    baseUrl: 'https://api.labyrinthe-rdc.com/api',   // default; "/V2" is added
+    timeout: 30.0,
+    maxRetries: 2,
+    maxRetryWait: 10.0,
+    autoReference: true,
+    httpClient: $psr18Client,                         // optional
+    logger: $psr3Logger,                              // never receives the key or query values
+);
+```
+
+`$labpay->lastResponse()` gives the status and headers of the last response (`->mode()` = `X-Labyrinthe-Mode`).
+
+## Test numbers (sandbox)
+
+| Provider | Success | Failures (collection) |
+|---|---|---|
+| Vodacom M-Pesa | `243813456789` | `…019` limit, `…029` unknown, `…039` not approved, `…049` insufficient balance |
+| Airtel Money | `243973456789` | `…069` failure |
+| Orange Money | `243893456789` | `…029` unknown, `…039` not approved, `…049` insufficient balance |
+
+A number ending in `129` stays pending without a final status. Local format works too (`0813456789`).
+
+## Development
+
+```bash
+composer install
+vendor/bin/phpunit          # unit tests, simulated HTTP client (no network)
+vendor/bin/phpstan analyse  # level max + strict rules
+```
+
+Examples: [`examples/`](examples). Specification: [`../openapi/openapi.yaml`](../openapi/openapi.yaml).
