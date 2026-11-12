@@ -94,3 +94,98 @@ function parseHeader(header: string): { timestamp: number | null; signatures: st
  *
  * `X-Labyrinthe-Signature: t=<timestamp>,v1=<hex>[,v1=<hex>]`: each v1 is the
  * HMAC-SHA256 of "<timestamp>.<raw body>" keyed with your signing secret
+ * (whsec_…). For 24 h after a rotation the header carries two v1; the
+ * notification is accepted when either matches.
+ */
+export const Webhooks = {
+  /**
+   * Verifies the signature and the timestamp, then returns the typed event.
+   * Pass the RAW body (string or bytes), never a re-encoded object.
+   *
+   * @throws SignatureVerificationError wrong/missing signature or old timestamp: answer 400
+   * @throws InvalidWebhookPayloadError signed body that is not a notification: answer 400
+   */
+  async constructEvent(rawBody: RawBody, signatureHeader: string | null | undefined, secret: Secrets, options: VerifyOptions = {}): Promise<WebhookEvent> {
+    const timestamp = await Webhooks.verify(rawBody, signatureHeader, secret, options);
+    const text = typeof rawBody === 'string' ? rawBody : new TextDecoder().decode(bytes(rawBody));
+    let body: unknown;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new InvalidWebhookPayloadError('The notification body is not valid JSON.');
+    }
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      throw new InvalidWebhookPayloadError('The notification body is not a JSON object.');
+    }
+    const object = body as Record<string, unknown>;
+    if (typeof object['event'] !== 'string') {
+      throw new InvalidWebhookPayloadError('Invalid notification payload: "event" should be a string.');
+    }
+    let payment: Payment;
+    try {
+      payment = toPayment(object['payment']);
+    } catch (error) {
+      const message = error instanceof LabPayError ? error.message.replace('Unexpected API payload', 'Invalid notification payload') : 'Invalid notification payload.';
+      throw new InvalidWebhookPayloadError(message);
+    }
+    return {
+      event: object['event'],
+      payment,
+      sentAt: typeof object['sent_at'] === 'string' ? object['sent_at'] : null,
+      timestamp,
+      raw: object,
+    };
+  },
+
+  /**
+   * Checks the signature (constant time) and the timestamp; resolves with
+   * the signed timestamp.
+   *
+   * @throws SignatureVerificationError
+   */
+  async verify(rawBody: RawBody, signatureHeader: string | null | undefined, secret: Secrets, options: VerifyOptions = {}): Promise<number> {
+    const secrets = secretList(secret);
+    const { timestamp, signatures } = parseHeader(signatureHeader ?? '');
+    if (timestamp === null || signatures.length === 0) {
+      throw new SignatureVerificationError('Missing or malformed X-Labyrinthe-Signature header (expected "t=<timestamp>,v1=<signature>").');
+    }
+    const body = bytes(rawBody);
+    let valid = false;
+    for (const candidate of secrets) {
+      const expected = await hmacHex(candidate, timestamp, body);
+      for (const signature of signatures) {
+        valid = safeEqual(expected, signature) || valid;
+      }
+    }
+    if (!valid) {
+      throw new SignatureVerificationError('Invalid notification signature: the body was not signed with this secret.');
+    }
+    const tolerance = options.toleranceSeconds ?? DEFAULT_TOLERANCE_SECONDS;
+    const now = options.now ?? Math.floor(Date.now() / 1000);
+    if (tolerance > 0 && Math.abs(now - timestamp) > tolerance) {
+      throw new SignatureVerificationError(`Notification timestamp is outside the ${tolerance} s tolerance (possible replay).`);
+    }
+    return timestamp;
+  },
+
+  /** True when the signature and the timestamp are valid. */
+  async isValid(rawBody: RawBody, signatureHeader: string | null | undefined, secret: Secrets, options: VerifyOptions = {}): Promise<boolean> {
+    try {
+      await Webhooks.verify(rawBody, signatureHeader, secret, options);
+      return true;
+    } catch (error) {
+      if (error instanceof SignatureVerificationError) return false;
+      throw error;
+    }
+  },
+
+  /** The X-Labyrinthe-Signature value LabPay would send (one v1 per secret): to test your endpoint. */
+  async sign(rawBody: RawBody, secret: Secrets, timestamp: number = Math.floor(Date.now() / 1000)): Promise<string> {
+    const body = bytes(rawBody);
+    const parts = [`t=${timestamp}`];
+    for (const candidate of secretList(secret)) {
+      parts.push(`v1=${await hmacHex(candidate, timestamp, body)}`);
+    }
+    return parts.join(',');
+  },
+};
