@@ -185,3 +185,190 @@ public static class Webhook
             throw new InvalidWebhookPayloadException("The notification body is not a JSON object.");
         }
 
+        if (!body.TryGetProperty("event", out var name) || name.ValueKind != JsonValueKind.String)
+        {
+            throw new InvalidWebhookPayloadException("Invalid notification payload: \"event\" should be a string.");
+        }
+
+        var reader = Json.Webhook;
+        return new WebhookEvent
+        {
+            Name = name.GetString() ?? string.Empty,
+            Payment = Mapping.ToPayment(Json.Field(body, "payment"), reader),
+            SentAt = Json.NullableDate(body, "sent_at"),
+            Timestamp = timestamp,
+            Raw = body,
+        };
+    }
+
+    internal static long Verify(byte[] rawBody, string? signatureHeader, IEnumerable<string> secrets, TimeSpan? tolerance, DateTimeOffset now)
+    {
+        Guard.NotNull(rawBody, nameof(rawBody));
+
+        var keys = SecretList(secrets);
+        long? timestamp = null;
+        var signatures = new List<byte[]>();
+        foreach (var part in (signatureHeader ?? string.Empty).Split(','))
+        {
+            var index = part.IndexOf('=');
+            if (index < 0)
+            {
+                continue;
+            }
+
+            var key = part.Substring(0, index).Trim();
+            var value = part.Substring(index + 1).Trim();
+            if (key == "t" && value.Length is > 0 and <= 12 && IsDigits(value))
+            {
+                timestamp = long.Parse(value, NumberStyles.None, CultureInfo.InvariantCulture);
+            }
+            else if (key == "v1" && value.Length == 64 && FromHex(value) is { } signature)
+            {
+                signatures.Add(signature);
+            }
+        }
+
+        if (timestamp is not { } signedAt || signatures.Count == 0)
+        {
+            throw new SignatureVerificationException("Missing or malformed X-Labyrinthe-Signature header (expected \"t=<timestamp>,v1=<signature>\").");
+        }
+
+        var valid = false;
+        foreach (var candidate in keys)
+        {
+            var expected = Hmac(candidate, signedAt, rawBody);
+            foreach (var signature in signatures)
+            {
+                // Aucune sortie anticipée : chaque comparaison est en temps constant.
+                valid = FixedTimeEquals(expected, signature) | valid;
+            }
+        }
+
+        if (!valid)
+        {
+            throw new SignatureVerificationException("Invalid notification signature: the body was not signed with this secret.");
+        }
+
+        var maxAge = tolerance ?? DefaultTolerance;
+        if (maxAge < TimeSpan.Zero)
+        {
+            throw new InvalidArgumentException("The tolerance cannot be negative.");
+        }
+
+        if (maxAge > TimeSpan.Zero && Math.Abs(now.ToUnixTimeSeconds() - signedAt) > (long)maxAge.TotalSeconds)
+        {
+            throw new SignatureVerificationException(
+                $"Notification timestamp is outside the {(long)maxAge.TotalSeconds} s tolerance (possible replay).");
+        }
+
+        return signedAt;
+    }
+
+    private static List<string> SecretList(IEnumerable<string>? secrets)
+    {
+        var list = new List<string>();
+        if (secrets is not null)
+        {
+            foreach (var secret in secrets)
+            {
+                if (!string.IsNullOrEmpty(secret))
+                {
+                    list.Add(secret);
+                }
+            }
+        }
+
+        if (list.Count == 0)
+        {
+            throw new InvalidArgumentException("The webhook signing secret cannot be empty (whsec_…, GET /V2/account with the live token).");
+        }
+
+        return list;
+    }
+
+    private static byte[] Hmac(string secret, long timestamp, byte[] body)
+    {
+        var prefix = Encoding.UTF8.GetBytes(timestamp.ToString(CultureInfo.InvariantCulture) + ".");
+        var message = new byte[prefix.Length + body.Length];
+        Buffer.BlockCopy(prefix, 0, message, 0, prefix.Length);
+        Buffer.BlockCopy(body, 0, message, prefix.Length, body.Length);
+        var key = Encoding.UTF8.GetBytes(secret);
+#if NET8_0_OR_GREATER
+        return HMACSHA256.HashData(key, message);
+#else
+        using var hmac = new HMACSHA256(key);
+        return hmac.ComputeHash(message);
+#endif
+    }
+
+    private static bool IsDigits(string value)
+    {
+        foreach (var c in value)
+        {
+            if (c is < '0' or > '9')
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static int HexValue(char c) => c switch
+    {
+        >= '0' and <= '9' => c - '0',
+        >= 'a' and <= 'f' => c - 'a' + 10,
+        >= 'A' and <= 'F' => c - 'A' + 10,
+        _ => -1,
+    };
+
+    private static byte[]? FromHex(string hex)
+    {
+        var bytes = new byte[hex.Length / 2];
+        for (var i = 0; i < bytes.Length; i++)
+        {
+            var high = HexValue(hex[2 * i]);
+            var low = HexValue(hex[(2 * i) + 1]);
+            if (high < 0 || low < 0)
+            {
+                return null;
+            }
+
+            bytes[i] = (byte)((high << 4) | low);
+        }
+
+        return bytes;
+    }
+
+    private static string ToHex(byte[] bytes)
+    {
+        var builder = new StringBuilder(bytes.Length * 2);
+        foreach (var b in bytes)
+        {
+            builder.Append(b.ToString("x2", CultureInfo.InvariantCulture));
+        }
+
+        return builder.ToString();
+    }
+
+#if NET8_0_OR_GREATER
+    private static bool FixedTimeEquals(byte[] left, byte[] right) => CryptographicOperations.FixedTimeEquals(left, right);
+#else
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining | System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
+    private static bool FixedTimeEquals(byte[] left, byte[] right)
+    {
+        if (left.Length != right.Length)
+        {
+            return false;
+        }
+
+        var diff = 0;
+        for (var i = 0; i < left.Length; i++)
+        {
+            diff |= left[i] ^ right[i];
+        }
+
+        return diff == 0;
+    }
+#endif
+}
