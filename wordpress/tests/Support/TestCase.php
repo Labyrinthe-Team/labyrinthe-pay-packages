@@ -83,3 +83,88 @@ abstract class TestCase extends \WP_UnitTestCase {
 
 	/**
 	 * Commande de 1500 CDF payée par LabPay (en attente de paiement).
+	 *
+	 * @param string $total    Total.
+	 * @param string $currency Devise.
+	 */
+	protected function order( string $total = '1500', string $currency = 'CDF' ): \WC_Order {
+		$order = wc_create_order();
+		$order->set_currency( $currency );
+		$order->set_payment_method( Gateway::ID );
+		$order->set_billing_phone( '0813456789' );
+		$order->set_billing_email( 'client@example.org' );
+		$order->set_total( $total );
+		$order->save();
+
+		return $order;
+	}
+
+	/**
+	 * Commande avec une tentative de dépôt déjà créée.
+	 *
+	 * @param string $payment_id Identifiant du dépôt.
+	 * @param string $mode       Mode.
+	 */
+	protected function order_with_deposit( string $payment_id = 'DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6', string $mode = 'test' ): \WC_Order {
+		$order = $this->order();
+		$order->update_meta_data( Order_Payments::META_PAYMENT_ID, $payment_id );
+		$order->update_meta_data( Order_Payments::META_PAYMENT_IDS, array( $payment_id ) );
+		$order->update_meta_data( Order_Payments::META_STATUS, 'pending' );
+		$order->update_meta_data( Order_Payments::META_MODE, $mode );
+		$order->update_meta_data( Order_Payments::META_ATTEMPT, '1' );
+		$order->save();
+
+		return $order;
+	}
+
+	/**
+	 * Paiement tel que renvoyé par l'API (PaymentPresenter).
+	 *
+	 * @param array<string, mixed> $overrides Champs modifiés.
+	 * @return array<string, mixed>
+	 */
+	protected static function api_payment( array $overrides = array() ): array {
+		return array_merge(
+			array(
+				'id'                      => 'DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6',
+				'reference'               => 'WC-1-1',
+				'operation'               => 'deposit',
+				'livemode'                => false,
+				'status'                  => 'pending',
+				'gateway_status'          => 'ACCEPTED',
+				'amount'                  => '1500.00',
+				'fee'                     => '52.50',
+				'total_amount'            => '1552.50',
+				'currency'                => 'CDF',
+				'country'                 => 'COD',
+				'phone'                   => '0813456789',
+				'provider'                => 'VODACOM_MPESA_COD',
+				'provider_transaction_id' => null,
+				'failure'                 => null,
+				'metadata'                => null,
+				'created_at'              => '2026-11-11T10:00:00+00:00',
+				'completed_at'            => null,
+				'refunded_amount'         => '0.00',
+			),
+			$overrides
+		);
+	}
+
+	/**
+	 * Notes de la commande (texte).
+	 *
+	 * @param \WC_Order $order Commande.
+	 * @return list<string>
+	 */
+	protected static function notes( \WC_Order $order ): array {
+		return array_values( array_map( static fn( $note ): string => (string) $note->content, wc_get_order_notes( array( 'order_id' => $order->get_id() ) ) ) );
+	}
+
+	/**
+	 * Recharge les passerelles (réglages relus).
+	 */
+	private function reset_gateways(): void {
+		WC()->payment_gateways()->payment_gateways = array();
+		WC()->payment_gateways()->init();
+	}
+}
