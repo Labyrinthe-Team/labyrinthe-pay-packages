@@ -54,3 +54,58 @@ même référence : LabPay rend le paiement existant au lieu de débiter deux fo
 référence) n'est ouverte qu'après un **échec définitif** (ou un changement de mode). Une demande de remboursement restée
 sans réponse est renvoyée avec la même référence.
 
+## Réglages
+
+*WooCommerce > Réglages > Paiements > LabPay (Mobile Money)* :
+
+| Réglage | |
+|---|---|
+| Activer, Titre, Description | comme pour toute passerelle |
+| Mode test | utilise la clé de test (`test_…`, bac à sable) ; activé par défaut |
+| Token API (production), Clé de test, Secret de signature | enregistrés **chiffrés** (secretbox libsodium, clé dérivée des salts WordPress) ; une clé de test est refusée dans le champ de production |
+| Préfixe des références | `WC` par défaut ; à changer si plusieurs boutiques partagent un token |
+| Journal détaillé | journalise chaque requête (les erreurs le sont toujours) |
+
+La page avertit quand la clé du mode actif manque, quand la devise n'est ni CDF ni USD, quand le secret de signature
+manque, quand un secret est devenu illisible (salts changés) et quand le site n'est pas en HTTPS (pas de notifications :
+la page d'attente et la synchronisation mettent quand même les commandes à jour).
+
+## Sécurité
+
+- Nonce sur chaque action AJAX, clé de commande exigée pour le statut, prédiction limitée par IP (30 / 10 min).
+- Webhook authentifié uniquement par la signature (route REST publique), corps limité à 64 Ko ; invalide → `400`,
+  secret absent ou commande verrouillée → `503` (LabPay renvoie), commande inconnue → `200` (acquittée, ignorée).
+- Capacités et nonces des écrans de réglages et de remboursement de WooCommerce ; sorties échappées, entrées nettoyées.
+- Journaux (*WooCommerce > État > Journaux*, source `labpay`) : identifiants de paiement, codes et statuts seulement ;
+  jamais de clé, de secret, de signature ni de numéro complet.
+- Le SDK et ses dépendances sont préfixés (`LabPay\WooCommerce\Vendor\…`, PHP-Scoper) pour éviter tout conflit avec
+  d'autres extensions ; le HTTP passe par `wp_remote_request()` (proxy et certificats de WordPress).
+
+## Filtres
+
+| Filtre | |
+|---|---|
+| `labpay_wc_base_url` (ou constante `LABPAY_WC_BASE_URL`) | racine de l'API, par ex. `http://localhost:8000/api` (`/V2` est ajouté) |
+| `labpay_wc_callback_url` | adresse de notification envoyée avec les paiements (`null` : aucune) |
+| `labpay_wc_reference` | référence d'une tentative (garder `<préfixe>-<n° de commande>-` au début) |
+| `labpay_wc_currencies` | devises acceptées (`CDF`, `USD`) |
+| `labpay_wc_http_client` | client PSR-18 utilisé par le SDK |
+
+## Développement
+
+```bash
+composer install                    # outils, puis vendor-prefixed/ (PHP-Scoper, tools/php-scoper)
+php bin/install-wp-tests.php        # WordPress + WooCommerce dans .wp-tests/, base MySQL labpay_wp_tests
+#   --from=<autre>/.wp-tests        # copie un WordPress/WooCommerce existant au lieu de le télécharger
+vendor/bin/phpunit                  # 39 tests, suite WordPress + WooCommerce (HPOS) ; LABPAY_TEST_HPOS=no pour le stockage historique
+vendor/bin/phpcs                    # WordPress Coding Standards
+vendor/bin/phpstan analyse --memory-limit=1G   # niveau 8, stubs WordPress et WooCommerce
+php bin/i18n.php                    # .pot, fr_FR .po/.mo/.l10n.php/.json (WP-CLI, tools/wp-cli)
+php bin/build-zip.php               # dist/labpay-for-woocommerce.zip
+```
+
+Les tests n'appellent jamais le réseau : `pre_http_request` sert les réponses de LabPay (`tests/Support/HttpMock.php`).
+
+## Licence
+
+GPL-2.0-or-later — voir [LICENSE](LICENSE). Le code embarqué dans `vendor-prefixed/` garde sa licence (MIT).
