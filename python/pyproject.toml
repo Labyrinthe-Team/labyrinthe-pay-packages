@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "labpay"
+version = "0.1.0"
+description = "Official Python SDK for LabPay: collect and send Mobile Money (M-Pesa, Airtel Money, Orange Money) in the DR Congo."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Labyrinthe Innovations SARL", email = "contact@labyrinthe-rdc.com" }]
+keywords = ["labpay", "mobile-money", "m-pesa", "airtel-money", "orange-money", "payments", "drc", "congo", "sdk"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = ["httpx>=0.25,<1"]
+
+[project.urls]
+Homepage = "https://pay.labyrinthe-rdc.com"
+Documentation = "https://docs.pay.labyrinthe-rdc.com"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/labpay"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/labpay", "tests", "examples", "README.md", "README.fr.md", "CHANGELOG.md", "LICENSE"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = ["-ra", "--strict-markers"]
+filterwarnings = ["error"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests", "examples"]
+mypy_path = "src"
+warn_unreachable = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = ["yaml"]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
