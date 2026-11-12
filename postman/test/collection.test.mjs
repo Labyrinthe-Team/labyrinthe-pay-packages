@@ -74,3 +74,79 @@ test('collection variables, auth and URLs', () => {
     for (const response of item.response) {
       assert.doesNotThrow(() => JSON.parse(response.body), `${item.name} ${response.code}: JSON example`);
     }
+  }
+});
+
+test('environments: local and production', () => {
+  const value = (env, key) => env.values.find((v) => v.key === key);
+  assert.equal(value(environments.local, 'baseUrl').value, 'http://localhost:8000/api');
+  assert.equal(value(environments.production, 'baseUrl').value, 'https://api.labyrinthe-rdc.com/api');
+  assert.equal(`${value(environments.production, 'baseUrl').value}/V2`, spec.servers[0].url, 'same server as the spec');
+  for (const env of Object.values(environments)) {
+    assert.equal(value(env, 'token').type, 'secret');
+    assert.equal(value(env, 'token').value, '', 'no key in an environment');
+  }
+});
+
+test('the committed collection is up to date', () => {
+  const script = fileURLToPath(new URL('../scripts/generate.mjs', import.meta.url));
+  assert.doesNotThrow(() => execFileSync(process.execPath, [script, '--check'], { stdio: 'pipe' }));
+});
+
+test('Newman runs the whole collection against a simulated API', async () => {
+  // Réponse d'exemple de la collection (premier 2xx documenté) pour chaque route.
+  const answers = requests().map((item) => {
+    const success = item.response.filter((r) => r.code >= 200 && r.code < 300).sort((a, b) => a.code - b.code)[0];
+    const pattern = new RegExp(`^/api/${item.request.url.path.map((p) => (p.startsWith(':') ? '[^/]+' : p)).join('/')}$`);
+    return { method: item.request.method, pattern, code: success.code, body: success.body };
+  });
+  const seen = [];
+  const server = createServer((req, res) => {
+    const url = new URL(req.url, 'http://localhost');
+    const answer = answers.find((a) => a.method === req.method && a.pattern.test(url.pathname));
+    seen.push({ method: req.method, path: url.pathname, authorization: req.headers.authorization });
+    let raw = '';
+    req.on('data', (chunk) => {
+      raw += chunk;
+    });
+    req.on('end', () => {
+      let body = answer ? answer.body : JSON.stringify({ message: 'Not found', code: 'PAYMENT_NOT_FOUND' });
+      // Comme l'API : le paiement créé porte la référence envoyée.
+      const sent = raw ? JSON.parse(raw) : {};
+      if (answer && sent.reference) {
+        const json = JSON.parse(body);
+        if (json.data && 'reference' in json.data) json.data.reference = sent.reference;
+        body = JSON.stringify(json);
+      }
+      res.writeHead(answer ? answer.code : 404, { 'Content-Type': 'application/json', 'X-Labyrinthe-Mode': 'test' });
+      res.end(body);
+    });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+
+  try {
+    const summary = await new Promise((resolve, reject) => {
+      newman.run(
+        {
+          collection,
+          environment: environments.local,
+          envVar: [
+            { key: 'baseUrl', value: `http://127.0.0.1:${port}/api` },
+            { key: 'token', value: 'test_simulated_key' },
+          ],
+          reporters: [],
+        },
+        (error, result) => (error ? reject(error) : resolve(result)),
+      );
+    });
+    const failures = summary.run.failures.map((f) => `${f.source?.name}: ${f.error?.message}`);
+    assert.deepEqual(failures, []);
+    assert.equal(summary.run.stats.requests.total, requests().length);
+    assert.ok(seen.every((r) => r.authorization === 'Bearer test_simulated_key'), 'Bearer auth sent on every request');
+    // Le dépôt a fourni son id aux requêtes suivantes.
+    assert.ok(seen.some((r) => r.path === `/api/V2/payments/${spec.components.schemas.Payment.example.id}`));
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
