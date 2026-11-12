@@ -241,3 +241,246 @@ class Gateway extends \WC_Payment_Gateway {
 
 			return false;
 		}
+
+		return true;
+	}
+
+	/**
+	 * Demande le paiement (dépôt LabPay) et redirige vers la page d'attente.
+	 *
+	 * @param int $order_id Commande.
+	 * @return array<string, string>
+	 */
+	public function process_payment( $order_id ): array {
+		$order = wc_get_order( $order_id );
+		if ( ! $order instanceof \WC_Order ) {
+			return array( 'result' => 'failure' );
+		}
+
+		$phone = self::posted_phone();
+		$phone = '' !== $phone ? $phone : Phone::normalize( (string) $order->get_billing_phone() );
+		if ( '' === $phone ) {
+			wc_add_notice( __( 'Enter a valid Mobile Money number (for example 0812345678 or +243812345678).', 'labpay-for-woocommerce' ), 'error' );
+
+			return array( 'result' => 'failure' );
+		}
+
+		$plugin   = Plugin::instance();
+		$payments = $plugin->payments;
+
+		try {
+			$payment = $payments->create_deposit( $order, $phone, self::posted_provider() );
+		} catch ( Configuration_Exception $e ) {
+			$plugin->logger->log( 'error', 'Payment method not configured: ' . $e->getMessage(), array( 'order' => $order->get_id() ) );
+			wc_add_notice( Order_Payments::customer_error( $e ), 'error' );
+
+			return array( 'result' => 'failure' );
+		} catch ( \Throwable $e ) {
+			$code = Order_Payments::error_code( $e );
+			$plugin->logger->log(
+				'warning',
+				'Deposit request refused.',
+				array(
+					'order' => $order->get_id(),
+					'error' => $code,
+				)
+			);
+			/* translators: %s: error code. */
+			$order->add_order_note( sprintf( __( 'LabPay payment request not accepted: %s.', 'labpay-for-woocommerce' ), $code ) );
+			wc_add_notice( Order_Payments::customer_error( $e ), 'error' );
+
+			return array( 'result' => 'failure' );
+		}
+
+		try {
+			$state = $payments->apply( $order, $payment, 'checkout' );
+		} catch ( Lock_Exception $e ) {
+			$state = 'pending';
+		}
+
+		if ( 'failed' === $state || $payment->isFailed() ) {
+			$message = __( 'Your operator refused the payment. Check your balance and your number, then try again.', 'labpay-for-woocommerce' );
+			if ( null !== $payment->failure && null !== $payment->failure->message ) {
+				$message .= ' (' . wp_strip_all_tags( $payment->failure->message ) . ')';
+			}
+			wc_add_notice( $message, 'error' );
+
+			return array( 'result' => 'failure' );
+		}
+
+		if ( 'pending' === $state ) {
+			$order->add_order_note(
+				sprintf(
+					/* translators: 1: LabPay payment ID, 2: masked phone number. */
+					__( 'LabPay payment %1$s requested: waiting for the customer to confirm on %2$s.', 'labpay-for-woocommerce' ),
+					$payment->id,
+					Logger::mask_phone( $phone )
+				)
+			);
+		}
+
+		if ( function_exists( 'WC' ) && null !== WC()->cart ) {
+			WC()->cart->empty_cart();
+		}
+
+		return array(
+			'result'   => 'success',
+			'redirect' => $this->get_return_url( $order ),
+		);
+	}
+
+	/**
+	 * Remboursement WooCommerce → remboursement LabPay (POST /refunds) du dépôt payé.
+	 *
+	 * @param int        $order_id Commande.
+	 * @param float|null $amount   Montant (null : tout).
+	 * @param string     $reason   Motif.
+	 * @return bool|\WP_Error
+	 */
+	public function process_refund( $order_id, $amount = null, $reason = '' ) {
+		$order = wc_get_order( $order_id );
+		if ( ! $order instanceof \WC_Order || ! $this->can_refund_order( $order ) ) {
+			return new \WP_Error( 'labpay_refund', __( 'Only a paid order can be refunded with LabPay.', 'labpay-for-woocommerce' ) );
+		}
+		$value = null === $amount || '' === $amount ? null : wc_format_decimal( (string) $amount, 2 );
+		if ( null !== $value && (float) $value <= 0 ) {
+			return new \WP_Error( 'labpay_refund', __( 'The refund amount must be greater than zero.', 'labpay-for-woocommerce' ) );
+		}
+
+		$plugin = Plugin::instance();
+		try {
+			$refund = $plugin->payments->refund( $order, $value, (string) $reason );
+		} catch ( \Throwable $e ) {
+			$plugin->logger->log(
+				'warning',
+				'Refund refused.',
+				array(
+					'order' => $order->get_id(),
+					'error' => Order_Payments::error_code( $e ),
+				)
+			);
+			$message = $e instanceof ApiException ? $e->getErrorCode() . ' — ' . $e->getMessage() : Order_Payments::customer_error( $e );
+
+			/* translators: %s: error from LabPay. */
+			return new \WP_Error( 'labpay_refund', sprintf( __( 'LabPay refused the refund: %s', 'labpay-for-woocommerce' ), wp_strip_all_tags( $message ) ) );
+		}
+
+		if ( $refund->isFailed() ) {
+			return new \WP_Error(
+				'labpay_refund',
+				/* translators: %s: failure code. */
+				sprintf( __( 'The LabPay refund failed (%s): no money was sent.', 'labpay-for-woocommerce' ), null !== $refund->failure ? $refund->failure->code : 'FAILED' )
+			);
+		}
+
+		$order->add_order_note(
+			sprintf(
+				/* translators: 1: LabPay refund ID, 2: amount, 3: currency, 4: status. */
+				__( 'LabPay refund %1$s requested: %2$s %3$s (%4$s). Fees are not refunded.', 'labpay-for-woocommerce' ),
+				$refund->id,
+				$refund->amount,
+				$refund->currency,
+				$refund->isCompleted() ? __( 'completed', 'labpay-for-woocommerce' ) : __( 'in progress, the final status arrives by notification', 'labpay-for-woocommerce' )
+			)
+		);
+
+		return true;
+	}
+
+	/**
+	 * Remboursement possible : commande payée par LabPay (dépôt connu).
+	 *
+	 * @param \WC_Order $order Commande.
+	 */
+	public function can_refund_order( $order ): bool {
+		return $order instanceof \WC_Order && '' !== (string) $order->get_meta( Order_Payments::META_PAYMENT_ID ) && $order->get_transaction_id() !== '';
+	}
+
+	/**
+	 * Token live : chiffré ; une clé de test est refusée ici.
+	 *
+	 * @param string $key   Champ.
+	 * @param mixed  $value Valeur postée.
+	 */
+	public function validate_api_token_field( $key, $value ): string {
+		return $this->validate_secret( $key, $value, static fn( string $v ): bool => 0 !== strpos( $v, 'test_' ), __( 'The live API token cannot be a test key (test_…): paste it in "Test key".', 'labpay-for-woocommerce' ) );
+	}
+
+	/**
+	 * Clé de test : chiffrée, doit commencer par test_.
+	 *
+	 * @param string $key   Champ.
+	 * @param mixed  $value Valeur postée.
+	 */
+	public function validate_test_key_field( $key, $value ): string {
+		return $this->validate_secret( $key, $value, static fn( string $v ): bool => 0 === strpos( $v, 'test_' ), __( 'The test key starts with test_.', 'labpay-for-woocommerce' ) );
+	}
+
+	/**
+	 * Secret de signature : chiffré.
+	 *
+	 * @param string $key   Champ.
+	 * @param mixed  $value Valeur postée.
+	 */
+	public function validate_webhook_secret_field( $key, $value ): string {
+		return $this->validate_secret( $key, $value, static fn( string $v ): bool => 1 === preg_match( '/^\S{8,}$/', $v ), __( 'The signing secret looks invalid (whsec_…).', 'labpay-for-woocommerce' ) );
+	}
+
+	/**
+	 * Préfixe des références : caractères autorisés par l'API seulement.
+	 *
+	 * @param string $key   Champ.
+	 * @param mixed  $value Valeur postée.
+	 */
+	public function validate_reference_prefix_field( $key, $value ): string {
+		$prefix = (string) preg_replace( '/[^A-Za-z0-9._:\-]/', '', is_string( $value ) ? $value : '' );
+
+		return '' === $prefix ? 'WC' : substr( $prefix, 0, 20 );
+	}
+
+	/**
+	 * Champ secret : vide = supprimé, valeur chiffrée inchangée = conservée, sinon chiffrée.
+	 *
+	 * @param string                 $key     Champ.
+	 * @param mixed                  $value   Valeur postée.
+	 * @param callable(string): bool $valid   Contrôle du format.
+	 * @param string                 $message Erreur affichée si le format est invalide.
+	 */
+	private function validate_secret( string $key, $value, callable $valid, string $message ): string {
+		$value  = trim( stripslashes( is_string( $value ) ? $value : '' ) );
+		$stored = (string) $this->get_option( $key );
+		if ( '' === $value ) {
+			return '';
+		}
+		if ( Crypto::is_encrypted( $value ) ) {
+			return hash_equals( $stored, $value ) ? $stored : '';
+		}
+		if ( ! $valid( $value ) ) {
+			\WC_Admin_Settings::add_error( $message );
+
+			return $stored;
+		}
+
+		return Crypto::encrypt( $value );
+	}
+
+	/**
+	 * Numéro posté (formulaire classique, ou payment_data du paiement en blocs).
+	 */
+	private static function posted_phone(): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce vérifié par WooCommerce (validation de commande / Store API).
+		$raw = isset( $_POST['labpay_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['labpay_phone'] ) ) : '';
+
+		return Phone::normalize( $raw );
+	}
+
+	/**
+	 * Opérateur posté (vide : détection automatique).
+	 */
+	private static function posted_provider(): ?string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce vérifié par WooCommerce (validation de commande / Store API).
+		$raw = isset( $_POST['labpay_provider'] ) ? sanitize_text_field( wp_unslash( $_POST['labpay_provider'] ) ) : '';
+
+		return Phone::provider( $raw );
+	}
+}
