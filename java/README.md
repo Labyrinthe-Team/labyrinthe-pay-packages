@@ -88,3 +88,93 @@ requests, pass a `String`, a `BigDecimal` or a `long`, never a `double`.
 
 All exceptions extend `LabPayException` (`code()`, `statusCode()`, unchecked). API errors extend `ApiException`
 (`errors()` per field, `headers()`, `retryAfter()`, `mode()`): `AuthenticationException` (401), `PermissionException`
+(403: `TOKEN_BLOCKED`, `MERCHANT_INACTIVE`, `KYC_REQUIRED`, `LIVE_TOKEN_REQUIRED`), `NotFoundException` (404),
+`ConflictException` (409), `InvalidRequestException` (422) with `ValidationException`, `InvalidPhoneNumberException`,
+`AmountOutOfRangeException`, `InsufficientBalanceException`, `RateLimitException` / `DailyLimitReachedException`
+(429), `ServiceUnavailableException` (5xx). SDK errors: `ConnectionException`, `RequestAbortedException` (thread
+interrupted), `InvalidArgumentException`, `UnexpectedResponseException`, `SignatureVerificationException`,
+`InvalidWebhookPayloadException`. Switch on `code()` or on the class, never on the message (in French).
+
+```java
+try {
+  labpay.payouts().create(params);
+} catch (InsufficientBalanceException e) {
+  // nothing was sent
+} catch (ValidationException e) {
+  e.errors().forEach((field, messages) -> log.warn("{}: {}", field, messages));
+}
+```
+
+## Notifications (webhooks)
+
+```java
+// Any framework: verify on the RAW body (byte[]), never on a re-encoded object.
+WebhookEvent event = Webhooks.constructEvent(rawBody, request.getHeader(Webhooks.SIGNATURE_HEADER), secret);
+if (event.isPaymentCompleted()) {
+  orders.deliver(event.payment().reference()); // once: deduplicate on X-Labyrinthe-Delivery or payment().id()
+}
+// answer 200 within 10 seconds; SignatureVerificationException / InvalidWebhookPayloadException → 400
+```
+
+Every `v1` of `X-Labyrinthe-Signature` (HMAC-SHA256 of `"<t>.<raw body>"`) is compared in constant time, the timestamp
+must be within 300 s, and several secrets are accepted (`constructEvent(body, header, List.of(s1, s2), tolerance,
+clock)`). `Webhooks.sign(body, secret)` builds a header for your tests. A JDK-only server is in
+[`examples/…/WebhookServer.java`](examples/src/main/java/cd/labyrinthe/labpay/examples/WebhookServer.java).
+
+### Spring Boot
+
+```properties
+labpay.api-key=${LABPAY_API_KEY}
+labpay.webhook.secret=${LABPAY_WEBHOOK_SECRET}
+# optional: labpay.base-url, labpay.timeout=30s, labpay.max-retries=2, labpay.max-retry-wait=10s,
+# labpay.auto-reference=true, labpay.webhook.path=/webhooks/labpay, labpay.webhook.tolerance=300s,
+# labpay.webhook.enabled=true
+```
+
+The starter registers a `LabPayClient` bean (when a key is available and you have none) and, in Spring MVC
+applications with a secret, `POST /webhooks/labpay`, which verifies each notification and publishes it:
+
+```java
+@EventListener
+void onNotification(WebhookEvent event) {
+  if (event.isPaymentCompleted()) orders.deliver(event.payment().reference());
+}
+```
+
+`400` for a bad signature or body, `500` when a listener throws (LabPay delivers it again later). Customise the
+builder with a `LabPayClientBuilderCustomizer` bean (proxy, own `HttpClient`…).
+
+## Configuration
+
+```java
+LabPayClient.builder()
+    .apiKey("test_…")                                    // or LABPAY_API_KEY
+    .baseUrl("https://api.labyrinthe-rdc.com/api")      // or LABPAY_BASE_URL; "/V2" is added
+    .timeout(Duration.ofSeconds(30))                     // per attempt
+    .maxRetries(2)
+    .maxRetryWait(Duration.ofSeconds(10))
+    .autoReference(true)
+    .httpClient(myHttpClient)                            // optional; must not follow redirects
+    .build();
+```
+
+`labpay.lastResponse()` gives the status and headers of the last response (`mode()` = `X-Labyrinthe-Mode`). Logs go
+through `System.Logger` (category `cd.labyrinthe.labpay`, i.e. `java.util.logging` or SLF4J via a bridge) and never
+contain the key or query values; `toString()` masks the key, secrets and phone numbers.
+
+Test numbers: see the [PHP README](../php/README.md#test-numbers-sandbox).
+
+## Development
+
+```bash
+./mvnw verify            # compile (-Werror), unit tests (JDK HTTP server simulating the API), OpenAPI contract,
+                         # Javadoc, SpotBugs, google-java-format check (JDK 21+)
+./mvnw spotless:apply    # format
+```
+
+The Maven Wrapper downloads Maven 3.9 on first use. Examples are compiled on every build
+([`examples/`](examples/src/main/java/cd/labyrinthe/labpay/examples)).
+
+## License
+
+MIT — Labyrinthe Innovations SARL. See [LICENSE](LICENSE).
