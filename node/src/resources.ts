@@ -179,3 +179,183 @@ export class Refunds extends Resource {
   async create(params: RefundParams, options: RequestOptions = {}): Promise<Payment> {
     const body = input.compact({
       payment_id: decodeURIComponent(input.id(params.paymentId, 'paymentId')),
+      amount: params.amount === undefined ? undefined : input.amount(params.amount),
+      callback_url: input.callbackUrl(params.callbackUrl),
+      metadata: input.metadata(params.metadata),
+    });
+    const reference = await this.reference(params.reference);
+    if (reference !== undefined) body['reference'] = reference;
+    const response = await this.transport.request({
+      method: 'POST',
+      path: '/refunds',
+      body,
+      mode: reference === undefined ? 'throttled-only' : 'safe',
+      paymentOnRefusal: true,
+      signal: options.signal,
+    });
+    return toPayment(asObject(response.body, 'body')['data']);
+  }
+}
+
+/** Track payments (`client.payments`). */
+export class Payments extends Resource {
+  /** One payment by its LabPay id (DEP-…, PAY-…, RFD-…), in the mode of the key. */
+  async get(id: string, options: RequestOptions = {}): Promise<Payment> {
+    const response = await this.transport.request({ method: 'GET', path: `/payments/${input.id(id)}`, mode: 'safe', signal: options.signal });
+    return toPayment(asObject(response.body, 'body')['data']);
+  }
+
+  /**
+   * Re-reads the status of a pending payment now and returns it updated (an
+   * already final payment is returned as is). A safety net: prefer
+   * notifications, never poll in a tight loop.
+   */
+  async sync(id: string, options: RequestOptions = {}): Promise<Payment> {
+    const response = await this.transport.request({ method: 'POST', path: `/payments/${input.id(id)}/sync`, mode: 'safe', signal: options.signal });
+    return toPayment(asObject(response.body, 'body')['data']);
+  }
+
+  /** V2 payments of the token, newest first, in the mode of the key. */
+  async list(params: ListPaymentsParams = {}, options: RequestOptions = {}): Promise<Page<Payment>> {
+    const response = await this.transport.request({
+      method: 'GET',
+      path: '/payments',
+      mode: 'safe',
+      query: {
+        status: input.oneOf(params.status, ['pending', 'completed', 'failed'], 'status'),
+        operation: input.oneOf(params.operation, ['deposit', 'payout', 'refund'], 'operation'),
+        currency: params.currency === undefined ? undefined : input.currency(params.currency),
+        country: input.country(params.country),
+        reference: params.reference,
+        from: input.date(params.from, 'from'),
+        to: input.date(params.to, 'to'),
+        per_page: input.perPage(params.perPage),
+        page: input.page(params.page),
+      },
+      signal: options.signal,
+    });
+    return toPage(response.body, toPayment);
+  }
+
+  /** Every payment matching the filters, fetching the next pages as you iterate. */
+  async *iterate(params: Omit<ListPaymentsParams, 'page'> = {}, options: RequestOptions = {}): AsyncGenerator<Payment, void, undefined> {
+    let page: number | null = 1;
+    while (page !== null) {
+      const result: Page<Payment> = await this.list({ perPage: input.MAX_PER_PAGE, ...params, page }, options);
+      yield* result.data;
+      page = result.hasMore ? result.currentPage + 1 : null;
+    }
+  }
+
+  /** The payment carrying your reference, or null (references are unique per token and mode). */
+  async findByReference(reference: string, options: RequestOptions = {}): Promise<Payment | null> {
+    const page = await this.list({ reference: input.reference(reference) ?? reference, perPage: 1 }, options);
+    return page.data[0] ?? null;
+  }
+}
+
+/** Countries, providers, availability and prediction (`client.providers`). */
+export class Providers extends Resource {
+  /** Countries open to payments: dial code, currencies, limits per currency. */
+  async countries(options: RequestOptions = {}): Promise<Country[]> {
+    const response = await this.transport.request({ method: 'GET', path: '/countries', mode: 'safe', signal: options.signal });
+    return asArray(asObject(response.body, 'body')['data'], 'data').map(toCountry);
+  }
+
+  /** Providers and their rules for an operation (deposit by default). */
+  async list(params: { operation?: Operation; country?: string } = {}, options: RequestOptions = {}): Promise<Provider[]> {
+    const response = await this.transport.request({
+      method: 'GET',
+      path: '/providers',
+      mode: 'safe',
+      query: { operation: input.oneOf(params.operation, ['deposit', 'payout', 'refund'], 'operation'), country: input.country(params.country) },
+      signal: options.signal,
+    });
+    return asArray(asObject(response.body, 'body')['data'], 'data').map(toProvider);
+  }
+
+  /** Real-time availability per provider code: OPERATIONAL, DELAYED (payouts queued) or CLOSED. */
+  async availability(params: { country?: string } = {}, options: RequestOptions = {}): Promise<Record<string, ProviderAvailability>> {
+    const response = await this.transport.request({ method: 'GET', path: '/availability', mode: 'safe', query: { country: input.country(params.country) }, signal: options.signal });
+    const data = asObject(asObject(response.body, 'body')['data'] ?? {}, 'data');
+    return Object.fromEntries(Object.entries(data).map(([provider, statuses]) => [provider, toAvailability(provider, statuses)]));
+  }
+
+  /** Validates a number and predicts its provider, without creating a payment. */
+  async predict(params: { phone: string; country?: string }, options: RequestOptions = {}): Promise<ProviderPrediction> {
+    const response = await this.transport.request({
+      method: 'POST',
+      path: '/predict-provider',
+      mode: 'safe',
+      body: input.compact({ phone: input.phone(params.phone), country: input.country(params.country) }),
+      signal: options.signal,
+    });
+    return toPrediction(asObject(response.body, 'body')['data']);
+  }
+}
+
+/** The merchant account, keys and balances (`client.account`). */
+export class AccountResource extends Resource {
+  /** Mode, fee rates, test key and (live token only) the signing secret. */
+  async get(options: RequestOptions = {}): Promise<Account> {
+    const response = await this.transport.request({ method: 'GET', path: '/account', mode: 'safe', signal: options.signal });
+    return toAccount(asObject(response.body, 'body')['data']);
+  }
+
+  /** One balance per currency, in the mode of the key. */
+  async balances(options: RequestOptions = {}): Promise<Balance[]> {
+    const response = await this.transport.request({ method: 'GET', path: '/balances', mode: 'safe', signal: options.signal });
+    return asArray(asObject(response.body, 'body')['data'], 'data').map(toBalance);
+  }
+
+  /** The balance of one currency, null when the account has none. */
+  async balance(currency: string, options: RequestOptions = {}): Promise<Balance | null> {
+    const code = currency.toUpperCase();
+    return (await this.balances(options)).find((b) => b.currency.toUpperCase() === code) ?? null;
+  }
+
+  /** New signing secret; the previous one stays accepted 24 h. Live token only, never retried. */
+  async rotateWebhookSecret(options: RequestOptions = {}): Promise<WebhookSecret> {
+    const response = await this.transport.request({ method: 'POST', path: '/account/webhook-secret/rotate', mode: 'throttled-only', signal: options.signal });
+    return toWebhookSecret(asObject(response.body, 'body')['data']);
+  }
+
+  /** New test key, returned; the previous one stops working immediately. Live token only, never retried. */
+  async rotateTestKey(options: RequestOptions = {}): Promise<string> {
+    const response = await this.transport.request({ method: 'POST', path: '/account/test-key/rotate', mode: 'throttled-only', signal: options.signal });
+    const data = asObject(asObject(response.body, 'body')['data'], 'data');
+    if (typeof data['test_key'] !== 'string') {
+      throw new UnexpectedResponseError('Unexpected API payload: "test_key" should be a string.', 'UNEXPECTED_RESPONSE');
+    }
+    return data['test_key'];
+  }
+}
+
+/** History of the notifications sent to your callback_url (`client.notifications`). */
+export class Notifications extends Resource {
+  /** Notifications of the token's payments (mode of the key), newest first. */
+  async list(params: ListNotificationsParams = {}, options: RequestOptions = {}): Promise<Page<Notification>> {
+    const response = await this.transport.request({
+      method: 'GET',
+      path: '/notifications',
+      mode: 'safe',
+      query: {
+        payment_id: params.paymentId === undefined ? undefined : decodeURIComponent(input.id(params.paymentId, 'paymentId')),
+        status: input.oneOf(params.status, ['delivered', 'pending', 'abandoned'], 'status'),
+        per_page: input.perPage(params.perPage),
+        page: input.page(params.page),
+      },
+      signal: options.signal,
+    });
+    return toPage(response.body, toNotification);
+  }
+
+  /** Resends a notification (a new one is created and delivered). Never retried automatically. */
+  async resend(id: number, options: RequestOptions = {}): Promise<Notification> {
+    if (!Number.isInteger(id) || id < 1) {
+      throw new InvalidArgumentError('id must be a positive integer.');
+    }
+    const response = await this.transport.request({ method: 'POST', path: `/notifications/${id}/resend`, mode: 'throttled-only', signal: options.signal });
+    return toNotification(asObject(response.body, 'body')['data']);
+  }
+}
