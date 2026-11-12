@@ -118,3 +118,123 @@ public final class Data {
     return data.get(key) == null ? null : string(data, key);
   }
 
+  /**
+   * Entier facultatif (nombre entier ou chaîne d'entier).
+   *
+   * @param data objet
+   * @param key champ
+   * @return l'entier, ou null
+   */
+  public static Long nullableLong(Map<String, Object> data, String key) {
+    Object value = data.get(key);
+    if (value instanceof Long || value instanceof Integer) {
+      return ((Number) value).longValue();
+    }
+    if (value instanceof BigDecimal) {
+      BigDecimal decimal = (BigDecimal) value;
+      try {
+        return decimal.longValueExact();
+      } catch (ArithmeticException e) {
+        return null;
+      }
+    }
+    if (value instanceof String && INTEGER.matcher((String) value).matches()) {
+      return Long.parseLong((String) value);
+    }
+    return null;
+  }
+
+  /**
+   * Entier facultatif borné à {@code int}.
+   *
+   * @param data objet
+   * @param key champ
+   * @return l'entier, ou null
+   */
+  public static Integer nullableInt(Map<String, Object> data, String key) {
+    Long value = nullableLong(data, key);
+    return value == null || value > Integer.MAX_VALUE || value < Integer.MIN_VALUE
+        ? null
+        : value.intValue();
+  }
+
+  /**
+   * Booléen, avec valeur par défaut quand le champ n'est pas un booléen.
+   *
+   * @param data objet
+   * @param key champ
+   * @param fallback valeur par défaut
+   * @return le booléen
+   */
+  public static boolean bool(Map<String, Object> data, String key, boolean fallback) {
+    Object value = data.get(key);
+    return value instanceof Boolean ? (Boolean) value : fallback;
+  }
+
+  /**
+   * Date ISO 8601 facultative ({@code Z}, {@code +00:00}, microsecondes ; sans fuseau : UTC).
+   * Tolérante : une date illisible donne null (la chaîne reste dans {@code raw}).
+   *
+   * @param data objet
+   * @param key champ
+   * @return l'instant, ou null
+   */
+  public static Instant nullableInstant(Map<String, Object> data, String key) {
+    Object value = data.get(key);
+    if (!(value instanceof String)) {
+      return null;
+    }
+    String text = ((String) value).trim();
+    try {
+      return OffsetDateTime.parse(text).toInstant();
+    } catch (DateTimeParseException e) {
+      try {
+        return LocalDateTime.parse(text.replace(' ', 'T')).toInstant(ZoneOffset.UTC);
+      } catch (DateTimeParseException ignored) {
+        return null;
+      }
+    }
+  }
+
+  /**
+   * Table de chaînes facultative (métadonnées) : les scalaires sont convertis en chaîne, le reste
+   * en null.
+   *
+   * @param data objet
+   * @param key champ
+   * @return la table non modifiable, ou null si absente
+   */
+  public static Map<String, String> nullableStringMap(Map<String, Object> data, String key) {
+    if (data.get(key) == null) {
+      return null;
+    }
+    Map<String, String> result = new LinkedHashMap<>();
+    for (Map.Entry<String, Object> entry : object(data.get(key), key).entrySet()) {
+      Object item = entry.getValue();
+      String text;
+      if (item instanceof String) {
+        text = (String) item;
+      } else if (item instanceof BigDecimal) {
+        text = ((BigDecimal) item).toPlainString();
+      } else if (item instanceof Number || item instanceof Boolean) {
+        text = item.toString();
+      } else {
+        text = null;
+      }
+      result.put(entry.getKey(), text);
+    }
+    return Collections.unmodifiableMap(result);
+  }
+
+  /**
+   * L'erreur « champ invalide ».
+   *
+   * @param key champ
+   * @param expected type attendu
+   * @return l'exception
+   */
+  public static UnexpectedResponseException invalid(String key, String expected) {
+    return new UnexpectedResponseException(
+        CONTEXT + ": \"" + key + "\" should be " + expected + ".");
+  }
+}
