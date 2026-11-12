@@ -1,0 +1,71 @@
+{
+  "name": "@labyrinthe/labpay",
+  "version": "0.1.0",
+  "description": "Official Node.js / TypeScript SDK for LabPay: collect and send Mobile Money (M-Pesa, Airtel Money, Orange Money) in the DR Congo.",
+  "keywords": [
+    "labpay",
+    "labyrinthe",
+    "mobile-money",
+    "m-pesa",
+    "airtel-money",
+    "orange-money",
+    "payments",
+    "drc",
+    "congo",
+    "sdk"
+  ],
+  "homepage": "https://docs.pay.labyrinthe-rdc.com",
+  "bugs": {
+    "email": "contact@labyrinthe-rdc.com"
+  },
+  "license": "MIT",
+  "author": "Labyrinthe Innovations SARL <contact@labyrinthe-rdc.com>",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.cts",
+  "files": [
+    "dist",
+    "README.md",
+    "README.fr.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.src.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:dist": "node scripts/check-dist.mjs && node scripts/check-dist.cjs",
+    "check": "npm run typecheck && npm test && npm run build && npm run check:dist",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.43",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "vite": "6.4.4",
+    "vitest": "3.2.7",
+    "yaml": "2.9.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
