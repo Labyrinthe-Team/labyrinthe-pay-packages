@@ -85,3 +85,89 @@ final class StatusTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		$this->assertStringContainsString( 'id="labpay-wc-waiting"', $html );
+		$this->assertStringContainsString( 'DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6', $html );
+		$this->assertTrue( wp_script_is( 'labpay-wc-waiting', 'enqueued' ) );
+	}
+
+	public function test_prediction_and_rate_limit(): void {
+		$this->configure();
+		set_transient(
+			'labpay_wc_providers_test',
+			array(
+				array(
+					'code'       => 'VODACOM_MPESA_COD',
+					'name'       => 'M-Pesa',
+					'currencies' => array( 'CDF', 'USD' ),
+				),
+			),
+			HOUR_IN_SECONDS
+		);
+		$this->http->push(
+			200,
+			array(
+				'data' => array(
+					'phone'    => '243813456789',
+					'provider' => 'VODACOM_MPESA_COD',
+					'country'  => 'COD',
+				),
+			)
+		);
+
+		$result = Plugin::instance()->ajax->predict( '0813456789', '198.51.100.7' );
+
+		$this->assertTrue( $result['valid'] );
+		$this->assertSame( 'M-Pesa', $result['name'] );
+		$this->assertSame( array( 'phone' => '0813456789' ), $this->http->last()['body'] );
+
+		$this->http->push_error( 422, 'INVALID_PHONE_NUMBER' );
+		$this->assertFalse( Plugin::instance()->ajax->predict( '0000000', '198.51.100.7' )['valid'] );
+
+		set_transient( 'labpay_wc_rate_' . md5( '198.51.100.7' ), 30, MINUTE_IN_SECONDS );
+		$this->assertTrue( Plugin::instance()->ajax->predict( '0813456789', '198.51.100.7' )['limited'] );
+		$this->assertSame( 0, $this->http->pending() );
+	}
+
+	public function test_providers_are_filtered_by_currency_and_cached(): void {
+		$this->configure();
+		$this->http->push(
+			200,
+			array(
+				'data' => array(
+					array(
+						'provider'   => 'VODACOM_MPESA_COD',
+						'country'    => 'COD',
+						'name'       => 'Vodacom M-Pesa',
+						'currencies' => array(
+							'CDF' => array( 'min_amount' => '100' ),
+							'USD' => array(),
+						),
+					),
+					array(
+						'provider'                   => 'ORANGE_COD',
+						'country'                    => 'COD',
+						'name'                       => 'Orange',
+						'name_displayed_to_customer' => 'Orange Money',
+						'currencies'                 => array( 'USD' => array() ),
+					),
+				),
+			)
+		);
+
+		$cdf = Plugin::instance()->ajax->providers( 'CDF' );
+		$usd = Plugin::instance()->ajax->providers( 'USD' );
+
+		$this->assertSame(
+			array(
+				array(
+					'code' => 'VODACOM_MPESA_COD',
+					'name' => 'Vodacom M-Pesa',
+				),
+			),
+			$cdf
+		);
+		$this->assertCount( 2, $usd );
+		$this->assertSame( 'Orange Money', $usd[1]['name'] );
+		$this->assertCount( 1, $this->http->requests, 'cached' );
+		$this->assertStringContainsString( 'operation=deposit', $this->http->last()['url'] );
+	}
+}
