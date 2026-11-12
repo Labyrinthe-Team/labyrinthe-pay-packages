@@ -92,3 +92,96 @@ remove_tree( $build );
 if ( ! is_dir( $dist ) ) {
 	mkdir( $dist, 0777, true );
 }
+if ( is_file( $zip ) ) {
+	unlink( $zip );
+}
+$mtime   = (int) ( getenv( 'SOURCE_DATE_EPOCH' ) ?: strtotime( '2026-11-12 00:00:00 UTC' ) );
+$archive = new ZipArchive();
+if ( true !== $archive->open( $zip, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
+	fail( "Cannot create $zip" );
+}
+$archive->addEmptyDir( LABPAY_WC_SLUG );
+$archive->setMtimeName( LABPAY_WC_SLUG . "/", $mtime );
+foreach ( $files as $relative ) {
+	$target = $build . '/' . $relative;
+	if ( ! is_dir( dirname( $target ) ) ) {
+		mkdir( dirname( $target ), 0777, true );
+	}
+	copy( $root . '/' . $relative, $target );
+	$name = LABPAY_WC_SLUG . '/' . $relative;
+	$archive->addFile( $root . '/' . $relative, $name );
+	$archive->setMtimeName( $name, $mtime );
+	$archive->setExternalAttributesName( $name, ZipArchive::OPSYS_UNIX, 0644 << 16 );
+}
+$archive->close();
+
+// 5. Vérifications du contenu.
+$check = new ZipArchive();
+$check->open( $zip );
+$names = array();
+for ( $i = 0; $i < $check->numFiles; $i++ ) {
+	$names[] = (string) $check->getNameIndex( $i );
+}
+$check->close();
+foreach ( array( 'labpay-for-woocommerce.php', 'uninstall.php', 'readme.txt', 'LICENSE', 'vendor-prefixed/autoload.php', 'vendor-prefixed/labyrinthe/labpay-php/src/Client.php', 'languages/labpay-for-woocommerce-fr_FR.mo', 'assets/js/blocks.js' ) as $expected ) {
+	if ( ! in_array( LABPAY_WC_SLUG . '/' . $expected, $names, true ) ) {
+		fail( "The zip does not contain $expected." );
+	}
+}
+foreach ( $names as $name ) {
+	$inside = substr( $name, strlen( LABPAY_WC_SLUG ) + 1 );
+	if ( '' !== $inside && 1 === preg_match( $forbidden, $inside ) ) {
+		fail( "Development file in the zip: $name" );
+	}
+	if ( 0 !== strpos( $name, LABPAY_WC_SLUG . '/' ) && LABPAY_WC_SLUG . '/' !== $name ) {
+		fail( "File outside the plugin folder: $name" );
+	}
+}
+
+// Syntaxe PHP de chaque fichier distribué (avec la version de PHP du build).
+$php_files = array_filter( $files, static fn( string $f ): bool => str_ends_with( $f, '.php' ) );
+foreach ( $php_files as $relative ) {
+	exec( escapeshellarg( PHP_BINARY ) . ' -l ' . escapeshellarg( $build . '/' . $relative ) . ' 2>&1', $output, $code );
+	if ( 0 !== $code ) {
+		fail( "PHP syntax error in $relative: " . implode( "\n", $output ) );
+	}
+}
+
+printf(
+	"dist/%s.zip %s: %d files (%d PHP), %.1f KB, sha256 %s\n",
+	LABPAY_WC_SLUG,
+	$version,
+	count( $files ),
+	count( $php_files ),
+	filesize( $zip ) / 1024,
+	hash_file( 'sha256', $zip )
+);
+
+/**
+ * Supprime un dossier récursivement.
+ *
+ * @param string $dir Dossier.
+ */
+function remove_tree( string $dir ): void {
+	if ( ! is_dir( $dir ) ) {
+		return;
+	}
+	$items = new RecursiveIteratorIterator(
+		new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ),
+		RecursiveIteratorIterator::CHILD_FIRST
+	);
+	foreach ( $items as $item ) {
+		$item->isDir() && ! $item->isLink() ? rmdir( $item->getPathname() ) : unlink( $item->getPathname() );
+	}
+	rmdir( $dir );
+}
+
+/**
+ * Arrête le build avec un message d'erreur.
+ *
+ * @param string $message Message.
+ */
+function fail( string $message ): never {
+	fwrite( STDERR, "Build failed: $message\n" );
+	exit( 1 );
+}
