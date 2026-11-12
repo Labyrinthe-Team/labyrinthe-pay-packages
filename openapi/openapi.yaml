@@ -1,0 +1,437 @@
+openapi: 3.1.0
+info:
+  title: LabPay API V2
+  version: 2.0.0
+  summary: Collect and send Mobile Money (M-Pesa, Airtel Money, Orange Money) in the DR Congo.
+  description: |
+    Public merchant API of LabPay, operated by Labyrinthe Innovations SARL.
+
+    Derived from the payment engine code (`routes/api/v2/payments.php`, `routes/api/v2/toolkit.php`,
+    V2 controllers and form requests, `PaymentPresenter`, `MerchantNotifier`). The V1 API is not described here.
+
+    - **Authentication**: `Authorization: Bearer <token>` (or `X-Api-Token`). A key starting with `test_` puts
+      the request in test mode (sandbox, separate balances and payments, no KYC required). Never in the body or the URL.
+    - **Responses** are always JSON. Every authenticated response carries `X-Labyrinthe-Mode: live|test`.
+    - **Amounts**: string or number with at most 2 decimals in requests; always strings with 2 decimals in responses.
+    - **Rate limit**: 120 requests per minute per token; beyond, `429` with `Retry-After` and no `code`.
+    - **Idempotency**: `reference` is unique per token and mode; resending a payment with a known reference returns
+      the existing payment (200 completed, 201/202 pending, 422 failed) instead of creating a second one.
+    - **Errors**: `{ "message", "code" }`, plus `errors` (per field) for a validation error. The list of codes is open.
+  contact:
+    name: LabPay — Labyrinthe Innovations SARL
+    email: contact@labyrinthe-rdc.com
+    url: https://pay.labyrinthe-rdc.com
+  license:
+    name: MIT
+    identifier: MIT
+externalDocs:
+  description: LabPay documentation
+  url: https://docs.pay.labyrinthe-rdc.com
+servers:
+  - url: https://api.labyrinthe-rdc.com/api/V2
+    description: Production (live token) and test mode (test key)
+security:
+  - bearerAuth: []
+  - apiToken: []
+tags:
+  - name: Payments
+    description: Deposits (collection), payouts, refunds and tracking.
+  - name: Toolkit
+    description: Countries, providers, availability and provider prediction.
+  - name: Account
+    description: Account, keys and balances.
+  - name: Notifications
+    description: Notifications sent to the `callback_url`.
+
+paths:
+  /deposits:
+    post:
+      tags: [Payments]
+      operationId: createDeposit
+      summary: Collect from a customer
+      description: |
+        The customer gets a PIN prompt on their phone; the payment stays `pending` until they confirm, then moves
+        to `completed` or `failed`. The customer pays `amount` + fees (`total_amount`); your balance is credited with
+        `amount` on confirmation. Only deliver an order on `completed`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MobileMoneyRequest' }
+            example:
+              amount: '1000'
+              currency: CDF
+              phone: '0813456789'
+              reference: ORDER-42
+              callback_url: https://boutique.example/webhooks/labpay
+              customer_message: Commande 42
+              metadata: { orderId: '42' }
+      responses:
+        '200': { $ref: '#/components/responses/PaymentAlreadyCompleted' }
+        '201': { $ref: '#/components/responses/PaymentAccepted' }
+        '202': { $ref: '#/components/responses/PaymentUnknown' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/PaymentRefusedOrInvalid' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /payouts:
+    post:
+      tags: [Payments]
+      operationId: createPayout
+      summary: Send money to a wallet
+      description: |
+        The recipient receives `amount`; your balance is debited immediately with `amount` + payout fees
+        (`total_amount`), under a lock, and credited back in full if the payout fails. A decimal amount is refused
+        (`INVALID_AMOUNT`) when the provider does not accept decimals in the currency.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MobileMoneyRequest' }
+            example:
+              amount: '5000'
+              currency: CDF
+              phone: '0813456789'
+              reference: PAYOUT-17
+              callback_url: https://boutique.example/webhooks/labpay
+              metadata: { payoutId: '17' }
+      responses:
+        '200': { $ref: '#/components/responses/PaymentAlreadyCompleted' }
+        '201': { $ref: '#/components/responses/PaymentAccepted' }
+        '202': { $ref: '#/components/responses/PaymentUnknown' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/PaymentRefusedOrInvalid' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /payouts/{id}/cancel:
+    post:
+      tags: [Payments]
+      operationId: cancelPayout
+      summary: Cancel a queued payout
+      description: |
+        Only for a payout left in the provider queue (`gateway_status: ENQUEUED`). The status is re-read first.
+        Asynchronous: the payout then moves to `failed` and your balance is credited back.
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200': { $ref: '#/components/responses/Payment' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /refunds:
+    post:
+      tags: [Payments]
+      operationId: createRefund
+      summary: Refund a deposit
+      description: |
+        All or part of a completed V2 deposit of this token. The refundable amount is the net amount credited to the
+        merchant (fees are not refunded). One refund in progress at a time per deposit. No fee on a refund.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefundRequest' }
+            example: { payment_id: DEP-01JCX8Q3T6Y0V5W1Z2A3B4C5D6, amount: '300', reference: REFUND-42-1 }
+      responses:
+        '200': { $ref: '#/components/responses/PaymentAlreadyCompleted' }
+        '201': { $ref: '#/components/responses/PaymentAccepted' }
+        '202': { $ref: '#/components/responses/PaymentUnknown' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/PaymentRefusedOrInvalid' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /payments:
+    get:
+      tags: [Payments]
+      operationId: listPayments
+      summary: List payments
+      description: V2 payments of the token, newest first, in the mode of the key used.
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/PaymentStatus' } }
+        - { name: operation, in: query, schema: { $ref: '#/components/schemas/Operation' } }
+        - { name: currency, in: query, schema: { type: string, pattern: '^[A-Za-z]{3}$' } }
+        - { name: country, in: query, schema: { type: string, pattern: '^[A-Za-z]{3}$' } }
+        - { name: reference, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: from, in: query, description: Creation date lower bound, schema: { type: string, format: date } }
+        - { name: to, in: query, description: Creation date upper bound (≥ from), schema: { type: string, format: date } }
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200':
+          description: Paginated payments (Laravel resource collection).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Payment' } }
+                  links: { $ref: '#/components/schemas/PaginationLinks' }
+                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /payments/{id}:
+    get:
+      tags: [Payments]
+      operationId: getPayment
+      summary: Get a payment
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200': { $ref: '#/components/responses/Payment' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /payments/{id}/sync:
+    post:
+      tags: [Payments]
+      operationId: syncPayment
+      summary: Refresh the status now
+      description: Queries the aggregator for a payment still `pending` and applies its status; a final payment is returned as is.
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200': { $ref: '#/components/responses/Payment' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /countries:
+    get:
+      tags: [Toolkit]
+      operationId: listCountries
+      summary: Countries open to payments
+      responses:
+        '200':
+          description: Open countries.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Country' } }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /providers:
+    get:
+      tags: [Toolkit]
+      operationId: listProviders
+      summary: Providers and their rules
+      parameters:
+        - { name: operation, in: query, description: 'Default: deposit', schema: { $ref: '#/components/schemas/Operation' } }
+        - { name: country, in: query, description: 'Default: every open country', schema: { type: string, pattern: '^[A-Za-z]{3}$' } }
+      responses:
+        '200':
+          description: Providers of the open countries.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Provider' } }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /availability:
+    get:
+      tags: [Toolkit]
+      operationId: getAvailability
+      summary: Provider availability
+      parameters:
+        - { name: country, in: query, schema: { type: string, pattern: '^[A-Za-z]{3}$' } }
+      responses:
+        '200':
+          description: Object keyed by provider code (an empty object when none).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    additionalProperties: { $ref: '#/components/schemas/ProviderAvailability' }
+              example:
+                data:
+                  VODACOM_MPESA_COD: { country: COD, DEPOSIT: OPERATIONAL, PAYOUT: DELAYED }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /predict-provider:
+    post:
+      tags: [Toolkit]
+      operationId: predictProvider
+      summary: Predict a number's provider
+      description: Validates a number and predicts its provider, without creating a payment.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone: { type: string, maxLength: 20 }
+                country: { type: string, pattern: '^[A-Za-z]{3}$' }
+            example: { phone: '0813456789', country: COD }
+      responses:
+        '200':
+          description: Normalized number, provider and country.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [phone, provider, country]
+                    properties:
+                      phone: { type: string, description: International format without "+", example: '243813456789' }
+                      provider: { type: string, example: VODACOM_MPESA_COD }
+                      country: { type: string, example: COD }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /balances:
+    get:
+      tags: [Account]
+      operationId: listBalances
+      summary: Balances per currency
+      description: In the mode of the key used (test balances with the test key). Shared with V1.
+      responses:
+        '200':
+          description: One balance per currency.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Balance' } }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /account:
+    get:
+      tags: [Account]
+      operationId: getAccount
+      summary: Account, fee rates, test key and signing secret
+      responses:
+        '200':
+          description: The account. Null fields are omitted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Account' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /account/webhook-secret/rotate:
+    post:
+      tags: [Account]
+      operationId: rotateWebhookSecret
+      summary: Rotate the signing secret
+      description: The previous secret stays accepted for 24 h. Live token only.
+      responses:
+        '200':
+          description: The new secret.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [webhook_secret, webhook_secret_previous_expires_at]
+                    properties:
+                      webhook_secret: { type: string, example: whsec_xxxxxxxxxxxxxxxx }
+                      webhook_secret_previous_expires_at: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /account/test-key/rotate:
+    post:
+      tags: [Account]
+      operationId: rotateTestKey
+      summary: Rotate the test key
+      description: The previous test key stops working immediately. Live token only.
+      responses:
+        '200':
+          description: The new test key.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [test_key]
+                    properties:
+                      test_key: { type: string, example: test_xxxxxxxxxxxxxxxx }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      operationId: listNotifications
+      summary: Notifications sent
+      description: Notifications of the token's payments (mode of the key used), newest first.
+      parameters:
+        - { name: payment_id, in: query, schema: { type: string, maxLength: 64 } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/NotificationStatus' } }
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200':
+          description: Paginated notifications.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Notification' } }
+                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /notifications/{id}/resend:
+    post:
+      tags: [Notifications]
+      operationId: resendNotification
+      summary: Resend a notification
+      description: A new notification (same event, same URL, up-to-date payment) is created and delivered; history is kept.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
