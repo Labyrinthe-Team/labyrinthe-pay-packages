@@ -81,3 +81,85 @@ $psr4  = array();
 $files = array();
 foreach ( $packages as $name => $package ) {
 	foreach ( $package['autoload']['psr-4'] ?? array() as $namespace => $paths ) {
+		foreach ( (array) $paths as $path ) {
+			$psr4[ LABPAY_WC_PREFIX . $namespace ][] = rtrim( $name . '/' . trim( $path, '/' ), '/' );
+		}
+	}
+	foreach ( $package['autoload']['files'] ?? array() as $file ) {
+		$files[] = $name . '/' . $file;
+	}
+	if ( isset( $package['autoload']['classmap'] ) ) {
+		fwrite( STDERR, "$name uses a classmap autoload, which is not supported here.\n" );
+		exit( 1 );
+	}
+}
+// Les espaces de noms les plus longs d'abord (GuzzleHttp\Psr7\ avant GuzzleHttp\).
+uksort( $psr4, static fn( string $a, string $b ): int => ( strlen( $b ) <=> strlen( $a ) ) ?: strcmp( $a, $b ) );
+
+$autoload  = "<?php\n";
+$autoload .= "/**\n * Autoloader des dépendances préfixées (généré par bin/prefix-dependencies.php, ne pas modifier).\n *\n * @package LabPayWooCommerce\n */\n\n";
+$autoload .= "// phpcs:ignoreFile\n\n";
+$autoload .= "if ( defined( 'LABPAY_WC_VENDOR_AUTOLOADED' ) ) {\n\treturn;\n}\ndefine( 'LABPAY_WC_VENDOR_AUTOLOADED', true );\n\n";
+$autoload .= "spl_autoload_register(\n\tstatic function ( \$class ) {\n\t\tstatic \$map = " . export( $psr4 ) . ";\n";
+$autoload .= "\t\tif ( 0 !== strpos( \$class, " . var_export( LABPAY_WC_PREFIX, true ) . " ) ) {\n\t\t\treturn;\n\t\t}\n";
+$autoload .= "\t\tforeach ( \$map as \$prefix => \$dirs ) {\n\t\t\tif ( 0 !== strpos( \$class, \$prefix ) ) {\n\t\t\t\tcontinue;\n\t\t\t}\n";
+$autoload .= "\t\t\t\$relative = str_replace( '\\\\', '/', substr( \$class, strlen( \$prefix ) ) ) . '.php';\n";
+$autoload .= "\t\t\tforeach ( \$dirs as \$dir ) {\n\t\t\t\t\$file = __DIR__ . '/' . \$dir . '/' . \$relative;\n\t\t\t\tif ( is_file( \$file ) ) {\n\t\t\t\t\trequire \$file;\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n);\n\n";
+foreach ( $files as $file ) {
+	$autoload .= "require_once __DIR__ . '/" . $file . "';\n";
+}
+file_put_contents( $target . '/autoload.php', $autoload );
+
+// Vérifications : le SDK est bien préfixé et chargeable.
+$client = (string) file_get_contents( $target . '/labyrinthe/labpay-php/src/Client.php' );
+if ( false === strpos( $client, 'namespace LabPay\\WooCommerce\\Vendor\\Labyrinthe\\LabPay;' ) ) {
+	fwrite( STDERR, "The SDK was not prefixed (namespace LabPay\\WooCommerce\\Vendor\\Labyrinthe\\LabPay expected).\n" );
+	exit( 1 );
+}
+$probe = $target . '/.probe.php';
+file_put_contents(
+	$probe,
+	"<?php require __DIR__ . '/autoload.php';\n"
+	. "\$c = new LabPay\\WooCommerce\\Vendor\\Labyrinthe\\LabPay\\Client('test_check');\n"
+	. "echo \$c->isTestMode() && class_exists('LabPay\\WooCommerce\\Vendor\\GuzzleHttp\\Psr7\\HttpFactory') ? 'ok' : 'ko';\n"
+);
+$result = trim( (string) shell_exec( escapeshellarg( PHP_BINARY ) . ' ' . escapeshellarg( $probe ) ) );
+unlink( $probe );
+if ( 'ok' !== $result ) {
+	fwrite( STDERR, "The prefixed SDK cannot be loaded from vendor-prefixed/autoload.php: $result\n" );
+	exit( 1 );
+}
+
+printf( "vendor-prefixed/ is ready (%d packages: %s).\n", count( $packages ), implode( ', ', array_keys( $packages ) ) );
+
+/**
+ * var_export lisible et stable.
+ *
+ * @param array<string, list<string>> $map Carte PSR-4.
+ */
+function export( array $map ): string {
+	$out = "array(\n";
+	foreach ( $map as $namespace => $dirs ) {
+		$out .= "\t\t\t" . var_export( $namespace, true ) . ' => array( ' . implode( ', ', array_map( static fn( $d ) => var_export( $d, true ), $dirs ) ) . " ),\n";
+	}
+	return $out . "\t\t)";
+}
+
+/**
+ * Supprime un dossier récursivement.
+ *
+ * @param string $dir Dossier.
+ */
+function remove_tree( string $dir ): void {
+	if ( ! is_dir( $dir ) ) {
+		return;
+	}
+	$items = new RecursiveIteratorIterator(
+		new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ),
+		RecursiveIteratorIterator::CHILD_FIRST
+	);
+	foreach ( $items as $item ) {
+		$item->isDir() && ! $item->isLink() ? rmdir( $item->getPathname() ) : unlink( $item->getPathname() );
+	}
+	rmdir( $dir );
+}
