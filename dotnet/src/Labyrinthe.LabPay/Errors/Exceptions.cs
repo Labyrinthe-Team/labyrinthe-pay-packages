@@ -161,3 +161,165 @@ public class InvalidRequestException : ApiException
 public class ValidationException : InvalidRequestException
 {
     /// <summary>Creates the exception (normally done by the SDK).</summary>
+    /// <param name="message">Message (in French when it comes from the API).</param>
+    /// <param name="code">Stable code.</param>
+    /// <param name="statusCode">HTTP status.</param>
+    /// <param name="errors">Per-field messages.</param>
+    /// <param name="headers">Response headers.</param>
+    public ValidationException(string message, string code, int statusCode, IReadOnlyDictionary<string, IReadOnlyList<string>>? errors = null, IReadOnlyDictionary<string, string>? headers = null)
+        : base(message, code, statusCode, errors, headers)
+    {
+    }
+}
+
+/// <summary>422 <c>INVALID_PHONE_NUMBER</c>.</summary>
+public class InvalidPhoneNumberException : InvalidRequestException
+{
+    /// <summary>Creates the exception (normally done by the SDK).</summary>
+    /// <param name="message">Message (in French when it comes from the API).</param>
+    /// <param name="code">Stable code.</param>
+    /// <param name="statusCode">HTTP status.</param>
+    /// <param name="errors">Per-field messages.</param>
+    /// <param name="headers">Response headers.</param>
+    public InvalidPhoneNumberException(string message, string code, int statusCode, IReadOnlyDictionary<string, IReadOnlyList<string>>? errors = null, IReadOnlyDictionary<string, string>? headers = null)
+        : base(message, code, statusCode, errors, headers)
+    {
+    }
+}
+
+/// <summary>422 <c>AMOUNT_TOO_SMALL</c>, <c>AMOUNT_TOO_LARGE</c> or <c>AMOUNT_OUT_OF_BOUNDS</c>: the message gives the limit.</summary>
+public class AmountOutOfRangeException : InvalidRequestException
+{
+    /// <summary>Creates the exception (normally done by the SDK).</summary>
+    /// <param name="message">Message (in French when it comes from the API).</param>
+    /// <param name="code">Stable code.</param>
+    /// <param name="statusCode">HTTP status.</param>
+    /// <param name="errors">Per-field messages.</param>
+    /// <param name="headers">Response headers.</param>
+    public AmountOutOfRangeException(string message, string code, int statusCode, IReadOnlyDictionary<string, IReadOnlyList<string>>? errors = null, IReadOnlyDictionary<string, string>? headers = null)
+        : base(message, code, statusCode, errors, headers)
+    {
+    }
+}
+
+/// <summary>422 <c>INSUFFICIENT_BALANCE</c>: nothing was sent.</summary>
+public class InsufficientBalanceException : InvalidRequestException
+{
+    /// <summary>Creates the exception (normally done by the SDK).</summary>
+    /// <param name="message">Message (in French when it comes from the API).</param>
+    /// <param name="code">Stable code.</param>
+    /// <param name="statusCode">HTTP status.</param>
+    /// <param name="errors">Per-field messages.</param>
+    /// <param name="headers">Response headers.</param>
+    public InsufficientBalanceException(string message, string code, int statusCode, IReadOnlyDictionary<string, IReadOnlyList<string>>? errors = null, IReadOnlyDictionary<string, string>? headers = null)
+        : base(message, code, statusCode, errors, headers)
+    {
+    }
+}
+
+/// <summary>429: too many requests for this token (120 per minute); see <see cref="ApiException.RetryAfter"/>.</summary>
+public class RateLimitException : ApiException
+{
+    /// <summary>Creates the exception (normally done by the SDK).</summary>
+    /// <param name="message">Message (in French when it comes from the API).</param>
+    /// <param name="code">Stable code.</param>
+    /// <param name="statusCode">HTTP status.</param>
+    /// <param name="errors">Per-field messages.</param>
+    /// <param name="headers">Response headers.</param>
+    public RateLimitException(string message, string code, int statusCode, IReadOnlyDictionary<string, IReadOnlyList<string>>? errors = null, IReadOnlyDictionary<string, string>? headers = null)
+        : base(message, code, statusCode, errors, headers)
+    {
+    }
+}
+
+/// <summary>429 <c>DAILY_LIMIT_REACHED</c>: token not enabled for production yet. Never retried automatically.</summary>
+public class DailyLimitReachedException : RateLimitException
+{
+    /// <summary>Creates the exception (normally done by the SDK).</summary>
+    /// <param name="message">Message (in French when it comes from the API).</param>
+    /// <param name="code">Stable code.</param>
+    /// <param name="statusCode">HTTP status.</param>
+    /// <param name="errors">Per-field messages.</param>
+    /// <param name="headers">Response headers.</param>
+    public DailyLimitReachedException(string message, string code, int statusCode, IReadOnlyDictionary<string, IReadOnlyList<string>>? errors = null, IReadOnlyDictionary<string, string>? headers = null)
+        : base(message, code, statusCode, errors, headers)
+    {
+    }
+}
+
+/// <summary>5xx: maintenance, operation disabled, provider closed, aggregator unavailable, server error.</summary>
+public class ServiceUnavailableException : ApiException
+{
+    /// <summary>Creates the exception (normally done by the SDK).</summary>
+    /// <param name="message">Message (in French when it comes from the API).</param>
+    /// <param name="code">Stable code.</param>
+    /// <param name="statusCode">HTTP status.</param>
+    /// <param name="errors">Per-field messages.</param>
+    /// <param name="headers">Response headers.</param>
+    public ServiceUnavailableException(string message, string code, int statusCode, IReadOnlyDictionary<string, IReadOnlyList<string>>? errors = null, IReadOnlyDictionary<string, string>? headers = null)
+        : base(message, code, statusCode, errors, headers)
+    {
+    }
+}
+
+/// <summary>The API could not be reached or did not answer in time (<c>CONNECTION_ERROR</c>, <c>TIMEOUT</c>).</summary>
+/// <remarks>For a deposit, payout or refund this does NOT mean the payment failed: it may have been created. Send the
+/// same request again with the same <c>Reference</c>, or look it up with <c>Payments.FindByReferenceAsync</c>.</remarks>
+public class ConnectionException : LabPayException
+{
+    /// <summary>Creates the exception.</summary>
+    /// <param name="message">Message (never contains the key or query values).</param>
+    /// <param name="timeout"><see langword="true"/> for <c>TIMEOUT</c>, otherwise <c>CONNECTION_ERROR</c>.</param>
+    public ConnectionException(string message, bool timeout)
+        : base(message, timeout ? "TIMEOUT" : "CONNECTION_ERROR")
+    {
+    }
+
+    /// <summary>True when the API did not answer in time.</summary>
+    public bool IsTimeout => Code == "TIMEOUT";
+}
+
+/// <summary>Invalid input, detected by the SDK before any request (<c>INVALID_ARGUMENT</c>).</summary>
+public class InvalidArgumentException : LabPayException
+{
+    /// <summary>Creates the exception.</summary>
+    /// <param name="message">What is wrong.</param>
+    public InvalidArgumentException(string message)
+        : base(message, "INVALID_ARGUMENT")
+    {
+    }
+}
+
+/// <summary>The API answered something the SDK cannot read (<c>UNEXPECTED_RESPONSE</c>).</summary>
+public class UnexpectedResponseException : LabPayException
+{
+    /// <summary>Creates the exception.</summary>
+    /// <param name="message">What is wrong.</param>
+    /// <param name="statusCode">HTTP status, if any.</param>
+    public UnexpectedResponseException(string message, int? statusCode = null)
+        : base(message, "UNEXPECTED_RESPONSE", statusCode)
+    {
+    }
+}
+
+/// <summary>Wrong or missing notification signature, or timestamp out of tolerance: answer 400.</summary>
+public class SignatureVerificationException : LabPayException
+{
+    /// <summary>Creates the exception.</summary>
+    /// <param name="message">What is wrong.</param>
+    public SignatureVerificationException(string message)
+        : base(message, "SIGNATURE_VERIFICATION_FAILED")
+    {
+    }
+}
+
+/// <summary>Correctly signed body that is not a valid notification: answer 400.</summary>
+public class InvalidWebhookPayloadException : LabPayException
+{
+    /// <summary>Creates the exception.</summary>
+    /// <param name="message">What is wrong.</param>
+    public InvalidWebhookPayloadException(string message)
+        : base(message, "INVALID_WEBHOOK_PAYLOAD")
+    {
+    }
+}
