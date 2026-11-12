@@ -57,3 +57,62 @@ public sealed class RefundRequest
     /// <summary>Id of the completed V2 deposit to refund (<c>DEP-…</c>).</summary>
     public string PaymentId { get; init; } = string.Empty;
 
+    /// <summary>Amount to refund; <see langword="null"/>: everything left to refund.</summary>
+    public decimal? Amount { get; init; }
+
+    /// <summary>Your reference (idempotency key); generated when absent unless auto references are off.</summary>
+    public string? Reference { get; init; }
+
+    /// <summary>Public HTTPS URL receiving the final status notification.</summary>
+    public string? CallbackUrl { get; init; }
+
+    /// <summary>Up to 20 key/value pairs.</summary>
+    public IReadOnlyDictionary<string, object?>? Metadata { get; init; }
+}
+
+/// <summary>Filters of <c>GET /V2/payments</c>.</summary>
+public sealed class ListPaymentsRequest
+{
+    /// <summary>Only payments with this status.</summary>
+    public PaymentStatus? Status { get; init; }
+
+    /// <summary>Only payments of this kind.</summary>
+    public Operation? Operation { get; init; }
+
+    /// <summary>Only payments in this currency.</summary>
+    public string? Currency { get; init; }
+
+    /// <summary>Only payments in this country (ISO alpha-3).</summary>
+    public string? Country { get; init; }
+
+    /// <summary>Only the payment carrying this reference.</summary>
+    public string? Reference { get; init; }
+
+    /// <summary>Created on or after this date (the date part is sent, <c>YYYY-MM-DD</c>).</summary>
+    public DateTime? From { get; init; }
+
+    /// <summary>Created on or before this date (not before <see cref="From"/>).</summary>
+    public DateTime? To { get; init; }
+
+    /// <summary>Page size, 1 to 100 (API default: 20).</summary>
+    public int? PerPage { get; init; }
+
+    /// <summary>Page number, from 1.</summary>
+    public int? Page { get; init; }
+}
+
+/// <summary>Filters of <c>GET /V2/notifications</c>.</summary>
+public sealed class ListNotificationsRequest
+{
+    /// <summary>Only the notifications of this payment.</summary>
+    public string? PaymentId { get; init; }
+
+    /// <summary>Only the notifications with this status.</summary>
+    public NotificationStatus? Status { get; init; }
+
+    /// <summary>Page size, 1 to 100.</summary>
+    public int? PerPage { get; init; }
+
+    /// <summary>Page number, from 1.</summary>
+    public int? Page { get; init; }
+}
