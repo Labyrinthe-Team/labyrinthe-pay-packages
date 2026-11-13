@@ -480,7 +480,7 @@
                 }
               ],
               "id": "8be7956c-9188-4bdf-a28b-7cf928f4496f",
-              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`, `API_VERSION_DISABLED`, `FEATURE_DISABLED`.",
               "originalRequest": {
                 "body": {},
                 "header": [
@@ -767,7 +767,7 @@
                 }
               ],
               "id": "0cdb2da8-5d84-49bc-a277-6ee7487f4e6f",
-              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`, `API_VERSION_DISABLED`, `FEATURE_DISABLED`.",
               "originalRequest": {
                 "body": {},
                 "header": [
@@ -1879,7 +1879,7 @@
                 }
               ],
               "id": "825c36b8-3346-4b8e-a806-f8e5a428729e",
-              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`, `API_VERSION_DISABLED`, `FEATURE_DISABLED`.",
               "originalRequest": {
                 "body": {
                   "mode": "raw",
@@ -3386,7 +3386,7 @@
                 }
               ],
               "id": "eb99bcb4-ed1b-4228-a27e-713f31955e16",
-              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`, `API_VERSION_DISABLED`, `FEATURE_DISABLED`.",
               "originalRequest": {
                 "body": {
                   "mode": "raw",
@@ -3844,7 +3844,7 @@
                 }
               ],
               "id": "f119e53f-f7eb-43fe-abc1-bb4c9b2f185b",
-              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`, `API_VERSION_DISABLED`, `FEATURE_DISABLED`.",
               "originalRequest": {
                 "body": {
                   "mode": "raw",
@@ -4207,7 +4207,7 @@
                 }
               ],
               "id": "8ebe211b-33bc-4eb7-acf4-594f50cd2d59",
-              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.",
+              "name": "`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`, `API_VERSION_DISABLED`, `FEATURE_DISABLED`.",
               "originalRequest": {
                 "body": {},
                 "header": [

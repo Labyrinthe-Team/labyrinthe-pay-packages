@@ -578,7 +578,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     ServiceUnavailable:
-      description: '`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`.'
+      description: '`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED` or `TEST_MODE_DISABLED`, `API_VERSION_DISABLED`, `FEATURE_DISABLED`.'
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -858,6 +858,10 @@ components:
         - GATEWAY_UNAVAILABLE
         - V2_DISABLED
         - TEST_MODE_DISABLED
+
+        - API_VERSION_DISABLED
+
+        - FEATURE_DISABLED
 
     Error:
       type: object

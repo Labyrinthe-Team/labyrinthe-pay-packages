@@ -44,7 +44,7 @@ Before a change is merged: tests green, static analysis clean, CHANGELOG updated
 - `reference` (1 to 100 of `A-Z a-z 0-9 . _ : -`) is the only idempotency mechanism of the API: keep the
   `sdk_<uuid>` generation and the retry modes identical in every SDK (`Safe` / `OnlyWhenThrottled`).
 - 503 codes that refuse before processing (`MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`,
-  `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `V2_DISABLED`, `TEST_MODE_DISABLED`) are only retried
+  `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `V2_DISABLED`, `TEST_MODE_DISABLED`, `API_VERSION_DISABLED`, `FEATURE_DISABLED`) are only retried
   after a `Retry-After`; `DAILY_LIMIT_REACHED` never.
 - Webhooks: verify on the raw body, every `v1` in constant time, 300 s tolerance by default.
 - The product name is always **LabPay**.
