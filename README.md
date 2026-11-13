@@ -22,7 +22,7 @@ integrations should use V2 (test key, idempotency, signed notifications). Docume
 | [`wordpress/`](wordpress) | `labpay-for-woocommerce` (WooCommerce payment gateway) | wordpress.org (not published yet) | 0.1.0 — preview |
 | [`postman/`](postman) | Postman collection of the API V2 (+ local / production environments) | — | 0.1.0 — preview |
 | [`java/`](java) | `com.labyrinthe-rdc:labpay` + `labpay-spring-boot-starter` (Java 17+) | Maven Central (not published yet) | 0.1.0 — preview |
-| [`dotnet/`](dotnet) | `Labyrinthe.LabPay` + `Labyrinthe.LabPay.AspNetCore` (netstandard2.0 / net8.0) | NuGet (not published yet) | 0.1.0 — draft, **not compiled yet** |
+| [`dotnet/`](dotnet) | `Labyrinthe.LabPay` + `Labyrinthe.LabPay.AspNetCore` (netstandard2.0 / net8.0) | NuGet (not published yet) | 0.1.0 — preview |
 | — | Python asyncio client | — | planned |
 
 ## Five-line start (PHP)

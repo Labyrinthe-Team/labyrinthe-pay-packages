@@ -7,8 +7,8 @@ All notable changes to `Labyrinthe.LabPay` and `Labyrinthe.LabPay.AspNetCore` ar
 
 ## [0.1.0] - 2026-11-12
 
-First preview, built against the LabPay API V2 (`openapi/openapi.yaml` 2.0.0). **Not compiled nor tested yet** (written
-without a .NET SDK available); not published.
+First preview, built against the LabPay API V2 (`openapi/openapi.yaml` 2.0.0). Builds with the .NET 8 SDK and passes its 70 tests;
+not published. The webhook endpoint answers 500 `HANDLER_FAILED` itself when the handler throws (LabPay retries).
 
 ### Added
 - `LabPayClient` (`netstandard2.0`, `net8.0`) for the V2 API (`https://api.labyrinthe-rdc.com/api/V2` by default,

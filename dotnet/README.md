@@ -5,9 +5,8 @@ Orange Money) in the DR Congo, in CDF and USD. Covers the **API V2** (the V1 API
 
 *Version française : [README.fr.md](README.fr.md).*
 
-> **Status: preview (0.1.0), not compiled in this first draft.** The code, tests and examples were written without a
-> .NET SDK available and have **not been built nor run yet**. Run `dotnet build` and `dotnet test` (below) before any
-> use, and report what breaks. Not published on NuGet.
+> **Status: preview (0.1.0).** Builds with the .NET 8 SDK (warnings as errors) and passes its 70 tests.
+> Not published on NuGet yet.
 
 - `Labyrinthe.LabPay`: `netstandard2.0` and `net8.0`, `HttpClient`, `System.Text.Json` (no reflection: trimming / AOT
   friendly on `net8.0`), async API with `CancellationToken`.

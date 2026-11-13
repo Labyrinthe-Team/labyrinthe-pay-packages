@@ -15,7 +15,7 @@ cd wordpress && composer install && php bin/install-wp-tests.php && vendor/bin/p
   && vendor/bin/phpcs && vendor/bin/phpstan analyse --memory-limit=1G   # needs MySQL; uses ../php (prefixed copy)
 cd postman && npm ci && npm test                                         # after a spec change: npm run generate
 cd java && ./mvnw verify          # JDK 17+ (format check on JDK 21+; fix with ./mvnw spotless:apply), Maven via the wrapper
-cd dotnet && dotnet build -c Release && dotnet test                      # .NET 8 SDK; first draft, never compiled yet
+cd dotnet && dotnet build -c Release && dotnet test                      # .NET 8 SDK
 ```
 
 Tests never hit the network: each SDK uses a simulated HTTP client (PSR-18 mock, `fetch` mock, `httpx.MockTransport`,
