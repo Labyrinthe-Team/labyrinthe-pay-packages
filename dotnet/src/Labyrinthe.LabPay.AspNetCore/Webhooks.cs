@@ -125,7 +125,22 @@ public static class LabPayEndpointRouteBuilderExtensions
             return Results.Content("{\"received\":false,\"error\":\"" + code + "\"}", "application/json", null, StatusCodes.Status400BadRequest);
         }
 
-        await resolve(context).HandleAsync(webhookEvent, context.RequestAborted).ConfigureAwait(false);
+        // A failing handler answers 500 itself (LabPay delivers the notification again later), without exposing the
+        // exception: the developer exception page must never be sent to LabPay.
+        try
+        {
+            await resolve(context).HandleAsync(webhookEvent, context.RequestAborted).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException || !context.RequestAborted.IsCancellationRequested)
+        {
+            if (logger is not null)
+            {
+                Log.HandlerFailed(logger, webhookEvent.Payment.Id, exception);
+            }
+
+            return Results.Content("{\"received\":false,\"error\":\"HANDLER_FAILED\"}", "application/json", null, StatusCodes.Status500InternalServerError);
+        }
+
         return Results.Content("{\"received\":true}", "application/json");
     }
 
@@ -186,5 +201,8 @@ public static class LabPayEndpointRouteBuilderExtensions
     {
         public static readonly Action<ILogger, string, Exception?> Rejected =
             LoggerMessage.Define<string>(LogLevel.Warning, new EventId(10, "LabPayWebhookRejected"), "LabPay notification rejected: {Code}");
+
+        public static readonly Action<ILogger, string, Exception?> HandlerFailed =
+            LoggerMessage.Define<string>(LogLevel.Error, new EventId(11, "LabPayWebhookHandlerFailed"), "LabPay notification handler failed for payment {PaymentId}");
     }
 }
