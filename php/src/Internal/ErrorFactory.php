@@ -66,6 +66,8 @@ final class ErrorFactory
         'GATEWAY_UNAVAILABLE' => ServiceUnavailableException::class,
         'V2_DISABLED' => ServiceUnavailableException::class,
         'TEST_MODE_DISABLED' => ServiceUnavailableException::class,
+        'API_VERSION_DISABLED' => ServiceUnavailableException::class,
+        'FEATURE_DISABLED' => ServiceUnavailableException::class,
     ];
 
     private function __construct()

@@ -100,7 +100,7 @@ Every exception implements `LabPayException`. API errors extend `ApiException` (
 | `InsufficientBalanceException` ⊂ `InvalidRequestException` | `INSUFFICIENT_BALANCE` |
 | `InvalidRequestException` | `INVALID_CURRENCY`, `UNSUPPORTED_COUNTRY`, `UNSUPPORTED_PROVIDER`, `INVALID_AMOUNT` |
 | `RateLimitException` / `DailyLimitReachedException` | `TOO_MANY_REQUESTS` (set by the SDK) / `DAILY_LIMIT_REACHED` (429) |
-| `ServiceUnavailableException` | `MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED`, `TEST_MODE_DISABLED`, 5xx |
+| `ServiceUnavailableException` | `MAINTENANCE`, `API_DISABLED`, `DEPOSITS_DISABLED`, `WITHDRAWALS_DISABLED`, `PROVIDER_TEMPORARILY_UNAVAILABLE`, `GATEWAY_UNAVAILABLE`, `V2_DISABLED`, `TEST_MODE_DISABLED`, `API_VERSION_DISABLED`, `FEATURE_DISABLED`, 5xx |
 | `ConnectionException` | network error or timeout (`isTimeout()`) |
 | `InvalidArgumentException` | invalid input, detected before any request |
 

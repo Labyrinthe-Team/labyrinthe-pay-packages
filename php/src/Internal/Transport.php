@@ -38,6 +38,8 @@ final class Transport
         'PROVIDER_TEMPORARILY_UNAVAILABLE',
         'V2_DISABLED',
         'TEST_MODE_DISABLED',
+        'API_VERSION_DISABLED',
+        'FEATURE_DISABLED',
     ];
 
     private ?ResponseInfo $lastResponse = null;

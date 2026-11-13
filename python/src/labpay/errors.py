@@ -206,6 +206,8 @@ _BY_CODE: Dict[str, Type[ApiError]] = {
     "GATEWAY_UNAVAILABLE": ServiceUnavailableError,
     "V2_DISABLED": ServiceUnavailableError,
     "TEST_MODE_DISABLED": ServiceUnavailableError,
+    "API_VERSION_DISABLED": ServiceUnavailableError,
+    "FEATURE_DISABLED": ServiceUnavailableError,
 }
 
 

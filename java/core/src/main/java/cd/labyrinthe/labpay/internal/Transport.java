@@ -49,7 +49,9 @@ public final class Transport {
           "WITHDRAWALS_DISABLED",
           "PROVIDER_TEMPORARILY_UNAVAILABLE",
           "V2_DISABLED",
-          "TEST_MODE_DISABLED");
+          "TEST_MODE_DISABLED",
+          "API_VERSION_DISABLED",
+          "FEATURE_DISABLED");
 
   private static final long BASE_DELAY_MS = 500;
   private static final long MAX_BACKOFF_MS = 8_000;

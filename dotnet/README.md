@@ -154,8 +154,7 @@ dotnet test                      # xUnit, simulated HttpMessageHandler, ASP.NET 
 dotnet format --verify-no-changes
 ```
 
-Requires the .NET 8 SDK (`global.json`). **This first draft has not been compiled nor tested**: expect a few build
-fixes on the first `dotnet build`.
+Requires the .NET 8 SDK (`global.json`). Builds with warnings as errors; 70 tests.
 
 ## License
 

@@ -32,6 +32,8 @@ export type ApiErrorCode =
   | 'GATEWAY_UNAVAILABLE'
   | 'V2_DISABLED'
   | 'TEST_MODE_DISABLED'
+  | 'API_VERSION_DISABLED'
+  | 'FEATURE_DISABLED'
   /** Given by the SDK to a 429 of the rate limiter (the API sends no code). */
   | 'TOO_MANY_REQUESTS'
   /** Given by the SDK when the API sent no code. */
@@ -217,6 +219,8 @@ const BY_CODE: Record<string, ApiErrorClass> = {
   GATEWAY_UNAVAILABLE: ServiceUnavailableError,
   V2_DISABLED: ServiceUnavailableError,
   TEST_MODE_DISABLED: ServiceUnavailableError,
+  API_VERSION_DISABLED: ServiceUnavailableError,
+  FEATURE_DISABLED: ServiceUnavailableError,
 };
 
 function classForStatus(status: number): ApiErrorClass {

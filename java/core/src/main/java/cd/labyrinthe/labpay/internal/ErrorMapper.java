@@ -104,7 +104,9 @@ public final class ErrorMapper {
         "PROVIDER_TEMPORARILY_UNAVAILABLE",
         "GATEWAY_UNAVAILABLE",
         "V2_DISABLED",
-        "TEST_MODE_DISABLED");
+        "TEST_MODE_DISABLED",
+        "API_VERSION_DISABLED",
+        "FEATURE_DISABLED");
     return Collections.unmodifiableMap(map);
   }
 

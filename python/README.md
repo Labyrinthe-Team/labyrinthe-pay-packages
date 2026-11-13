@@ -46,7 +46,7 @@ with LabPay(api_key="test_…") as labpay:        # test key: sandbox, no real m
 | `account.get()` / `account.balances()` / `account.balance("CDF")` | `GET /V2/account`, `GET /V2/balances` |
 | `account.rotate_webhook_secret()` / `account.rotate_test_key()` | `POST /V2/account/webhook-secret/rotate`, `POST /V2/account/test-key/rotate` |
 | `notifications.list(...)` / `notifications.resend(id)` | `GET /V2/notifications`, `POST /V2/notifications/{id}/resend` |
-| `labpay.webhooks.construct_event(raw_body, header, secret)` | notifications sent to your `callback_url` |
+| `webhooks.construct_event(raw_body, header, secret)` (`from labpay import webhooks`) | notifications sent to your `callback_url` |
 
 ## Statuses, idempotency, retries
 

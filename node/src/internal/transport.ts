@@ -82,6 +82,8 @@ export const REFUSED_BEFORE_PROCESSING: readonly string[] = [
   'PROVIDER_TEMPORARILY_UNAVAILABLE',
   'V2_DISABLED',
   'TEST_MODE_DISABLED',
+  'API_VERSION_DISABLED',
+  'FEATURE_DISABLED',
 ];
 
 export const defaultSleep: Sleep = (ms, signal) =>
