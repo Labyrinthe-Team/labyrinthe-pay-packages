@@ -2,8 +2,8 @@
 
 *[Version française](README.fr.md)*
 
-A ready-to-run [Postman](https://www.postman.com/) collection (v2.1) of the **LabPay API V2** (Mobile Money in the DR
-Congo: M-Pesa, Airtel Money, Orange Money; CDF and USD), generated from [`../openapi/openapi.yaml`](../openapi/openapi.yaml),
+A ready-to-run [Postman](https://www.postman.com/) collection (v2.1) of the **LabPay API V2** (Mobile Money across
+Africa: M-Pesa, Airtel Money, Orange Money, MTN MoMo…; each open country in its own currency), generated from [`../openapi/openapi.yaml`](../openapi/openapi.yaml),
 the source of truth of the API. Collection **0.1.0 — preview**, generated from the spec 2.0.0 (see the
 [CHANGELOG](CHANGELOG.md)).
 

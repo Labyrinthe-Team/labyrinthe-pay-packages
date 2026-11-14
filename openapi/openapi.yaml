@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: LabPay API V2
   version: 2.0.0
-  summary: Collect and send Mobile Money (M-Pesa, Airtel Money, Orange Money) in the DR Congo.
+  summary: Collect and send Mobile Money (M-Pesa, Airtel Money, Orange Money, MTN MoMo…) across Africa, in each open country's currency.
   description: |
     Public merchant API of LabPay, operated by Labyrinthe Innovations SARL.
 
@@ -622,9 +622,9 @@ components:
       required: [amount, currency, phone]
       properties:
         amount: { $ref: '#/components/schemas/Amount' }
-        currency: { type: string, description: 'Currency of an open country (CDF, USD), checked against the number''s country.', example: CDF }
+        currency: { type: string, description: 'Currency of an open country (e.g. CDF, USD, XOF), checked against the number''s country.', example: CDF }
         phone: { type: string, maxLength: 20, description: 'Local number of the default country (0812345678) or international (+243812345678).' }
-        country: { type: string, pattern: '^[A-Za-z]{3}$', description: 'Without it: local number = DR Congo, international number = country of the dial code.' }
+        country: { type: string, pattern: '^[A-Za-z]{3}$', description: 'Without it: local number = default country of the platform (GET /countries, default: true), international number = country of the dial code.' }
         provider: { type: string, maxLength: 64, pattern: '^[A-Za-z0-9_]+$', description: Inferred from the number when absent. }
         reference: { type: string, maxLength: 100, pattern: '^[A-Za-z0-9._:\-]+$', description: Unique per token and mode (idempotency). }
         callback_url: { type: string, format: uri, maxLength: 2048, description: Public HTTPS address (private or local addresses are refused). }
