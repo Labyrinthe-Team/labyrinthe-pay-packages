@@ -28,7 +28,7 @@ class Gateway extends \WC_Payment_Gateway {
 		$this->id                 = self::ID;
 		$this->has_fields         = true;
 		$this->method_title       = __( 'LabPay (Mobile Money)', 'labpay-for-woocommerce' );
-		$this->method_description = __( 'M-Pesa, Airtel Money and Orange Money payments in the DR Congo with LabPay. The customer confirms the payment on their phone with their PIN.', 'labpay-for-woocommerce' );
+		$this->method_description = __( 'Mobile Money payments (M-Pesa, Airtel Money, Orange Money…) across Africa with LabPay. The customer confirms the payment on their phone with their PIN.', 'labpay-for-woocommerce' );
 		$this->supports           = array( 'products', 'refunds' );
 
 		$this->init_form_fields();
@@ -151,9 +151,9 @@ class Gateway extends \WC_Payment_Gateway {
 				? __( 'Test mode is enabled but no test key is saved: the payment method is hidden at checkout.', 'labpay-for-woocommerce' )
 				: __( 'No live API token is saved: the payment method is hidden at checkout.', 'labpay-for-woocommerce' );
 		}
-		if ( ! in_array( get_woocommerce_currency(), Settings::CURRENCIES, true ) ) {
+		if ( ! in_array( get_woocommerce_currency(), self::accepted_currencies(), true ) ) {
 			/* translators: %s: shop currency code. */
-			$notices[] = sprintf( __( 'LabPay accepts CDF and USD only; the shop currency is %s: the payment method is hidden at checkout.', 'labpay-for-woocommerce' ), get_woocommerce_currency() );
+			$notices[] = sprintf( __( 'The shop currency %s is not accepted (CDF and USD by default; add the currency of a country open on LabPay with the labpay_wc_currencies filter): the payment method is hidden at checkout.', 'labpay-for-woocommerce' ), get_woocommerce_currency() );
 		}
 		if ( '' === $settings->secret( 'webhook_secret' ) ) {
 			$notices[] = __( 'No signing secret: LabPay notifications are refused, statuses are only updated by the waiting page.', 'labpay-for-woocommerce' );
@@ -169,20 +169,14 @@ class Gateway extends \WC_Payment_Gateway {
 	}
 
 	/**
-	 * Disponible si la passerelle est activée, la clé du mode configurée et la devise CDF ou USD.
+	 * Disponible si la passerelle est activée, la clé du mode configurée et la devise acceptée (filtre `labpay_wc_currencies`).
 	 */
 	public function is_available(): bool {
 		if ( ! parent::is_available() ) {
 			return false;
 		}
-		$settings = new Settings();
-
-		/**
-		 * Devises proposées au paiement Mobile Money (CDF et USD par défaut).
-		 *
-		 * @param list<string> $currencies Codes ISO 4217.
-		 */
-		$currencies = (array) apply_filters( 'labpay_wc_currencies', Settings::CURRENCIES );
+		$settings   = new Settings();
+		$currencies = self::accepted_currencies();
 		$currency   = get_woocommerce_currency();
 		$order_id   = absint( get_query_var( 'order-pay' ) );
 		if ( $order_id > 0 ) {
@@ -191,6 +185,20 @@ class Gateway extends \WC_Payment_Gateway {
 		}
 
 		return in_array( $currency, $currencies, true ) && '' !== $settings->key_for( $settings->mode() );
+	}
+
+	/**
+	 * Devises acceptées : celles du filtre, sinon CDF et USD (même liste pour l'alerte d'administration et la validation de commande).
+	 *
+	 * @return list<string>
+	 */
+	private static function accepted_currencies(): array {
+		/**
+		 * Devises proposées au paiement Mobile Money (CDF et USD par défaut ; ajouter celles des autres pays ouverts sur LabPay, ex. XOF).
+		 *
+		 * @param list<string> $currencies Codes ISO 4217.
+		 */
+		return array_values( array_map( 'strval', (array) apply_filters( 'labpay_wc_currencies', Settings::CURRENCIES ) ) );
 	}
 
 	/**
