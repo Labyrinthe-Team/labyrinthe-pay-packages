@@ -37,7 +37,7 @@ final class Payment_Method extends AbstractPaymentMethodType {
 	}
 
 	/**
-	 * Active si la passerelle est disponible (activée, clé du mode, devise CDF ou USD).
+	 * Active si la passerelle est disponible (activée, clé du mode, devise acceptée : CDF ou USD par défaut, filtre `labpay_wc_currencies`).
 	 */
 	public function is_active(): bool {
 		$gateways = function_exists( 'WC' ) && null !== WC()->payment_gateways() ? WC()->payment_gateways()->payment_gateways() : array();

@@ -3,14 +3,14 @@
 *[Version française](README.fr.md)*
 
 WordPress plugin that adds a **Mobile Money payment gateway** to WooCommerce with [LabPay](https://pay.labyrinthe-rdc.com),
-the Mobile Money aggregator of the DR Congo (M-Pesa, Airtel Money, Orange Money; CDF and USD) operated by Labyrinthe
+the Mobile Money aggregator for Africa (M-Pesa, Airtel Money, Orange Money, MTN MoMo…) operated by Labyrinthe
 Innovations SARL. Version **0.1.0 — preview**, built on the PHP SDK [`labyrinthe/labpay-php`](../php) (API V2).
 
 | | |
 |---|---|
 | Slug / text domain | `labpay-for-woocommerce` |
 | Gateway ID | `labpay` (settings: option `woocommerce_labpay_settings`) |
-| Requirements | WordPress 6.4+, WooCommerce 8.0+, PHP 8.1+, shop currency CDF or USD |
+| Requirements | WordPress 6.4+, WooCommerce 8.0+, PHP 8.1+, shop currency CDF or USD by default, other currencies of open countries through the `labpay_wc_currencies` filter |
 | Compatibility | HPOS (order tables), block checkout, classic checkout, "Pay for order" page |
 | License | GPL-2.0-or-later (bundled SDK and dependencies: MIT) |
 
@@ -59,7 +59,7 @@ opened after a **final failure** (or a mode change). An unanswered refund reques
 | Reference prefix | `WC` by default; change it if several shops share one token |
 | Debug log | logs every request (errors are always logged) |
 
-The page warns when the key of the active mode is missing, when the shop currency is neither CDF nor USD, when the
+The page warns when the key of the active mode is missing, when the shop currency is not an accepted currency, when the
 signing secret is missing, when a secret became unreadable (salts changed) and when the site is not on HTTPS (no
 notifications: the waiting page and the sync still update the orders).
 
@@ -81,7 +81,7 @@ notifications: the waiting page and the sync still update the orders).
 | `labpay_wc_base_url` (or constant `LABPAY_WC_BASE_URL`) | API root, e.g. `http://localhost:8000/api` (`/V2` is added) |
 | `labpay_wc_callback_url` | notification address sent with payments (`null`: none) |
 | `labpay_wc_reference` | reference of an attempt (keep `<prefix>-<order ID>-` at the start) |
-| `labpay_wc_currencies` | accepted currencies (`CDF`, `USD`) |
+| `labpay_wc_currencies` | accepted currencies (default `CDF`, `USD`; add the currency of any country open on LabPay, e.g. `XOF`) |
 | `labpay_wc_http_client` | PSR-18 client used by the SDK |
 
 ## Development

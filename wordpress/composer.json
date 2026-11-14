@@ -1,6 +1,6 @@
 {
     "name": "labyrinthe/labpay-woocommerce",
-    "description": "LabPay for WooCommerce: Mobile Money payment gateway (M-Pesa, Airtel Money, Orange Money) for shops in the DR Congo.",
+    "description": "LabPay for WooCommerce: Mobile Money payment gateway (M-Pesa, Airtel Money, Orange Money) for shops across Africa.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "keywords": [
@@ -13,6 +13,7 @@
         "m-pesa",
         "airtel-money",
         "orange-money",
+        "africa",
         "drc",
         "congo",
         "rdc"

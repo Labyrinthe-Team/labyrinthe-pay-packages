@@ -22,7 +22,7 @@ final class Settings {
 	/** Champs chiffrés en base. */
 	public const SECRET_FIELDS = array( 'api_token', 'test_key', 'webhook_secret' );
 
-	/** Devises acceptées par l'API V2 (pays ouverts : RD Congo). */
+	/** Devises proposées par défaut (pays historique, RD Congo) ; les devises des autres pays ouverts s'ajoutent par le filtre `labpay_wc_currencies`. */
 	public const CURRENCIES = array( 'CDF', 'USD' );
 
 	/**

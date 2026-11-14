@@ -3,15 +3,15 @@
 *[English version](README.md)*
 
 Extension WordPress qui ajoute une **passerelle de paiement Mobile Money** à WooCommerce avec
-[LabPay](https://pay.labyrinthe-rdc.com), l'agrégateur Mobile Money de la RD Congo (M-Pesa, Airtel Money, Orange Money ;
-CDF et USD) opéré par Labyrinthe Innovations SARL. Version **0.1.0 — aperçu**, construite sur le SDK PHP
+[LabPay](https://pay.labyrinthe-rdc.com), l'agrégateur Mobile Money pour l'Afrique (M-Pesa, Airtel Money, Orange Money,
+MTN MoMo…) opéré par Labyrinthe Innovations SARL. Version **0.1.0 — aperçu**, construite sur le SDK PHP
 [`labyrinthe/labpay-php`](../php) (API V2).
 
 | | |
 |---|---|
 | Slug / domaine de traduction | `labpay-for-woocommerce` |
 | Identifiant de passerelle | `labpay` (réglages : option `woocommerce_labpay_settings`) |
-| Prérequis | WordPress 6.4+, WooCommerce 8.0+, PHP 8.1+, devise de la boutique CDF ou USD |
+| Prérequis | WordPress 6.4+, WooCommerce 8.0+, PHP 8.1+, devise de la boutique CDF ou USD par défaut, autres devises des pays ouverts via le filtre `labpay_wc_currencies` |
 | Compatibilité | HPOS (tables de commandes), validation en blocs, validation classique, page « Payer la commande » |
 | Licence | GPL-2.0-or-later (SDK et dépendances embarqués : MIT) |
 
@@ -66,7 +66,7 @@ sans réponse est renvoyée avec la même référence.
 | Préfixe des références | `WC` par défaut ; à changer si plusieurs boutiques partagent un token |
 | Journal détaillé | journalise chaque requête (les erreurs le sont toujours) |
 
-La page avertit quand la clé du mode actif manque, quand la devise n'est ni CDF ni USD, quand le secret de signature
+La page avertit quand la clé du mode actif manque, quand la devise n'est pas une devise acceptée, quand le secret de signature
 manque, quand un secret est devenu illisible (salts changés) et quand le site n'est pas en HTTPS (pas de notifications :
 la page d'attente et la synchronisation mettent quand même les commandes à jour).
 
@@ -88,7 +88,7 @@ la page d'attente et la synchronisation mettent quand même les commandes à jou
 | `labpay_wc_base_url` (ou constante `LABPAY_WC_BASE_URL`) | racine de l'API, par ex. `http://localhost:8000/api` (`/V2` est ajouté) |
 | `labpay_wc_callback_url` | adresse de notification envoyée avec les paiements (`null` : aucune) |
 | `labpay_wc_reference` | référence d'une tentative (garder `<préfixe>-<n° de commande>-` au début) |
-| `labpay_wc_currencies` | devises acceptées (`CDF`, `USD`) |
+| `labpay_wc_currencies` | devises acceptées (par défaut `CDF`, `USD` ; ajoutez la devise de tout pays ouvert sur LabPay, ex. `XOF`) |
 | `labpay_wc_http_client` | client PSR-18 utilisé par le SDK |
 
 ## Développement
