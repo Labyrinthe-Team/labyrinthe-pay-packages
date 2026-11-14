@@ -1,7 +1,7 @@
 # SDK Node.js / TypeScript LabPay
 
 SDK officiel de [LabPay](https://pay.labyrinthe-rdc.com) : encaisser et envoyer du Mobile Money (M-Pesa, Airtel
-Money, Orange Money) en RD Congo, en CDF et en USD. Couvre l'**API V2** (la V1 n'est pas couverte).
+Money, Orange Money, MTN MoMo…) en Afrique, dans chaque pays ouvert sur la plateforme et dans sa devise (CDF, USD, XAF, XOF…). Couvre l'**API V2** (la V1 n'est pas couverte).
 
 *English version: [README.md](README.md).*
 

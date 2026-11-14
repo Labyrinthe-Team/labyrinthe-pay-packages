@@ -6,7 +6,7 @@
     <AssemblyName>Labyrinthe.LabPay</AssemblyName>
     <PackageId>Labyrinthe.LabPay</PackageId>
     <Title>LabPay</Title>
-    <Description>Official .NET client for LabPay, the Mobile Money aggregator of the DR Congo (M-Pesa, Airtel Money, Orange Money; CDF and USD): deposits, payouts, refunds, payment tracking and signed notifications. Safe retries with idempotency, typed errors, exact amounts.</Description>
+    <Description>Official .NET client for LabPay, the Mobile Money aggregator for Africa (M-Pesa, Airtel Money, Orange Money, MTN MoMo…; each open country in its own currency): deposits, payouts, refunds, payment tracking and signed notifications. Safe retries with idempotency, typed errors, exact amounts.</Description>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">

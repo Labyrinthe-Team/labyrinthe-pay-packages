@@ -1,7 +1,8 @@
 # LabPay SDKs
 
-Official integration packages for [LabPay](https://pay.labyrinthe-rdc.com), the Mobile Money aggregator of the DR
-Congo (M-Pesa, Airtel Money, Orange Money; CDF and USD), operated by Labyrinthe Innovations SARL. Collect from a
+Official integration packages for [LabPay](https://pay.labyrinthe-rdc.com), the Mobile Money aggregator for
+Africa (M-Pesa, Airtel Money, Orange Money, MTN MoMo…; each open country in its own currency), operated by
+Labyrinthe Innovations SARL in Kinshasa. Collect from a
 customer, send money to a wallet, refund, and receive signed notifications — whatever your stack.
 
 *Les README de chaque package existent aussi en français (`README.fr.md`).*

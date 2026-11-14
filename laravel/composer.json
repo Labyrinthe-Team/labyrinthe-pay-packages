@@ -1,9 +1,9 @@
 {
     "name": "labyrinthe/labpay-laravel",
-    "description": "Laravel integration of LabPay (Mobile Money in the DR Congo): client, facade, publishable config and signed webhook route.",
+    "description": "Laravel integration of LabPay (Mobile Money across Africa): client, facade, publishable config and signed webhook route.",
     "type": "library",
     "license": "MIT",
-    "keywords": ["labpay", "laravel", "mobile-money", "m-pesa", "airtel-money", "orange-money", "payments", "drc", "webhooks"],
+    "keywords": ["labpay", "laravel", "mobile-money", "m-pesa", "airtel-money", "orange-money", "payments", "africa", "drc", "webhooks"],
     "homepage": "https://docs.pay.labyrinthe-rdc.com",
     "authors": [
         {

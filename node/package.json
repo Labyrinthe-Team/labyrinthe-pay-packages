@@ -1,7 +1,7 @@
 {
   "name": "@labyrinthe/labpay",
   "version": "0.1.0",
-  "description": "Official Node.js / TypeScript SDK for LabPay: collect and send Mobile Money (M-Pesa, Airtel Money, Orange Money) in the DR Congo.",
+  "description": "Official Node.js / TypeScript SDK for LabPay: collect and send Mobile Money (M-Pesa, Airtel Money, Orange Money, MTN MoMo…) across Africa.",
   "keywords": [
     "labpay",
     "labyrinthe",
@@ -10,6 +10,7 @@
     "airtel-money",
     "orange-money",
     "payments",
+    "africa",
     "drc",
     "congo",
     "sdk"

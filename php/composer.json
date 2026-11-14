@@ -1,6 +1,6 @@
 {
     "name": "labyrinthe/labpay-php",
-    "description": "Official PHP SDK for LabPay: collect and send Mobile Money (M-Pesa, Airtel Money, Orange Money) in the DR Congo.",
+    "description": "Official PHP SDK for LabPay: collect and send Mobile Money (M-Pesa, Airtel Money, Orange Money, MTN MoMo…) across Africa.",
     "type": "library",
     "license": "MIT",
     "keywords": [
@@ -11,6 +11,7 @@
         "airtel-money",
         "orange-money",
         "payments",
+        "africa",
         "drc",
         "congo",
         "rdc",

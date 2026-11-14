@@ -1,7 +1,7 @@
 # LabPay Python SDK
 
 Official Python SDK for [LabPay](https://pay.labyrinthe-rdc.com): collect and send Mobile Money (M-Pesa, Airtel
-Money, Orange Money) in the DR Congo, in CDF and USD. Covers the **API V2** (the V1 API is not covered).
+Money, Orange Money, MTN MoMo…) across Africa, in every country open on the platform and in its currency (CDF, USD, XAF, XOF…). Covers the **API V2** (the V1 API is not covered).
 
 *Version française : [README.fr.md](README.fr.md).*
 

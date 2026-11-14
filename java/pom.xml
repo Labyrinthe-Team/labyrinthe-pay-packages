@@ -18,7 +18,7 @@
   <packaging>pom</packaging>
 
   <name>LabPay SDK (parent)</name>
-  <description>Official Java SDK for LabPay, the Mobile Money aggregator of the DR Congo: collect, send and refund M-Pesa, Airtel Money and Orange Money payments, and verify signed notifications.</description>
+  <description>Official Java SDK for LabPay, the Mobile Money aggregator for Africa: collect, send and refund M-Pesa, Airtel Money and Orange Money payments, and verify signed notifications.</description>
   <url>https://pay.labyrinthe-rdc.com</url>
   <inceptionYear>2026</inceptionYear>
 
