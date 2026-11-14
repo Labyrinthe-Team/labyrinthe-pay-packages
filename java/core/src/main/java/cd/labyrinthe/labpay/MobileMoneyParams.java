@@ -60,7 +60,7 @@ public final class MobileMoneyParams {
    * Shortcut for the three required fields.
    *
    * @param amount net amount, e.g. {@code "1500"} or {@code "12.50"}
-   * @param currency {@code CDF} or {@code USD}
+   * @param currency currency of the number's country, e.g. {@code CDF}, {@code USD}, {@code XOF}
    * @param phone local ({@code 0812345678}) or international ({@code +243812345678}) number
    * @return the parameters
    */
@@ -212,7 +212,7 @@ public final class MobileMoneyParams {
     /**
      * Currency.
      *
-     * @param currency {@code CDF} or {@code USD}
+     * @param currency currency of the number's country, e.g. {@code CDF}, {@code USD}, {@code XOF}
      * @return this builder
      */
     public Builder currency(String currency) {
@@ -233,7 +233,7 @@ public final class MobileMoneyParams {
     }
 
     /**
-     * ISO alpha-3 country of the number (default: DR Congo for a local number).
+     * ISO alpha-3 country of the number (without it: a local number belongs to the platform's default country, an international number to the country of its dial code).
      *
      * @param country e.g. {@code COD}
      * @return this builder

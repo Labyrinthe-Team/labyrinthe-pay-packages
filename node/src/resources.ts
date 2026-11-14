@@ -42,11 +42,11 @@ export interface RequestOptions {
 export interface MobileMoneyParams {
   /** Net amount, > 0, at most 2 decimals ("1500", "12.50"). Prefer strings. */
   amount: string | number;
-  /** "CDF" or "USD". */
+  /** Currency of the number's country, e.g. "CDF", "USD", "XOF". */
   currency: string;
   /** Local ("0812345678") or international ("+243812345678"), at most 20 characters. */
   phone: string;
-  /** ISO alpha-3 country of the number (default: DR Congo for a local number). */
+  /** ISO alpha-3 country of the number (without it: a local number belongs to the platform's default country, an international number to the country of its dial code). */
   country?: string;
   /** Provider code (inferred from the number when absent), e.g. VODACOM_MPESA_COD. */
   provider?: string;

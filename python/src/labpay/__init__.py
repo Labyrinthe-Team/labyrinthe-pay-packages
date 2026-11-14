@@ -1,4 +1,4 @@
-"""Official Python SDK for LabPay: Mobile Money (M-Pesa, Airtel Money, Orange Money) in the DR Congo.
+"""Official Python SDK for LabPay: Mobile Money (M-Pesa, Airtel Money, Orange Money, MTN MoMo…) across Africa.
 
 >>> from labpay import LabPay
 >>> labpay = LabPay(api_key="test_…")            # test key: sandbox, no real money

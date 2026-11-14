@@ -30,9 +30,9 @@ final class DepositService extends MobileMoneyService
      *
      * @param string|int|float             $amount          net amount credited to you, > 0, at most 2 decimals
      *                                                      ("1500", "12.50"); the customer pays it plus fees
-     * @param string                       $currency        "CDF" or "USD"
+     * @param string                       $currency        Currency of the number's country, e.g. "CDF", "USD", "XOF"
      * @param string                       $phone           local ("0812345678") or international ("+243812345678")
-     * @param string|null                  $country         ISO alpha-3 country of the number (default: DR Congo for a local number)
+     * @param string|null                  $country         ISO alpha-3 country of the number (without it: a local number belongs to the platform's default country, an international number to the country of its dial code)
      * @param string|null                  $provider        provider code (inferred from the number when null)
      * @param string|null                  $reference       your reference, unique per token: 1 to 100 of A-Z a-z 0-9 . _ : -
      * @param string|null                  $callbackUrl     public HTTPS URL receiving the final status notification

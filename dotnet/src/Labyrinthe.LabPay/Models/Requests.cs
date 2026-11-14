@@ -23,13 +23,13 @@ public sealed class MobileMoneyRequest
     /// deposit (the customer pays it plus fees), received by the recipient for a payout.</summary>
     public decimal Amount { get; init; }
 
-    /// <summary><c>CDF</c> or <c>USD</c>.</summary>
+    /// <summary>Currency of the number's country, e.g. <c>CDF</c>, <c>USD</c>, <c>XOF</c>.</summary>
     public string Currency { get; init; } = string.Empty;
 
     /// <summary>Local (<c>0812345678</c>) or international (<c>+243812345678</c>) number, at most 20 characters.</summary>
     public string Phone { get; init; } = string.Empty;
 
-    /// <summary>ISO alpha-3 country of the number (default: DR Congo for a local number).</summary>
+    /// <summary>ISO alpha-3 country of the number (without it: a local number belongs to the platform's default country, an international number to the country of its dial code).</summary>
     public string? Country { get; init; }
 
     /// <summary>Provider code (inferred from the number when absent), e.g. <c>VODACOM_MPESA_COD</c>.</summary>

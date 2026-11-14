@@ -23,7 +23,7 @@ import java.util.Map;
  * @param amount deposit: credited to you; payout: received by the recipient; refund: refunded
  * @param fee LabPay fees, or null
  * @param totalAmount deposit: paid by the customer; payout: debited from your balance; or null
- * @param currency {@code CDF} or {@code USD}
+ * @param currency ISO 4217 currency, e.g. {@code CDF}, {@code USD}, {@code XOF}
  * @param country ISO 3166-1 alpha-3 country of the number (e.g. {@code COD}), or null
  * @param phone phone number in the local format of the country, or null
  * @param provider provider code (e.g. {@code VODACOM_MPESA_COD}), or null

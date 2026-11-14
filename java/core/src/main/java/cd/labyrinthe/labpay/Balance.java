@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * Balance of one currency, in the mode of the key.
  *
- * @param currency {@code CDF} or {@code USD}
+ * @param currency ISO 4217 currency, e.g. {@code CDF}, {@code USD}, {@code XOF}
  * @param balance string with 2 decimals, e.g. {@code "125000.00"}
  * @param updatedAt last change, or null
  */

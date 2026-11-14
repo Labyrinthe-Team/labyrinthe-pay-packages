@@ -103,7 +103,7 @@ class Deposits(_Resource):
         (``sdk_<uuid>``) so that the SDK can retry safely.
 
         :param amount: net amount credited to you, > 0, at most 2 decimals (``"1500"``, ``"12.50"``, ``Decimal``)
-        :param currency: ``"CDF"`` or ``"USD"``
+        :param currency: currency of the number's country, e.g. ``"CDF"``, ``"USD"``, ``"XOF"``
         :param phone: local (``"0812345678"``) or international (``"+243812345678"``)
         :raises InvalidArgumentError: before any call when the input is invalid
         :raises APIConnectionError: the payment may have been created: resend with the same reference

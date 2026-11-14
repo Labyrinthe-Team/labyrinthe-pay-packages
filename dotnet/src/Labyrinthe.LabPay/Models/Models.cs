@@ -42,7 +42,7 @@ public sealed record Payment
     /// <summary>Deposit: paid by the customer. Payout: debited from your balance.</summary>
     public string? TotalAmount { get; init; }
 
-    /// <summary><c>CDF</c> or <c>USD</c>.</summary>
+    /// <summary>ISO 4217 currency, e.g. <c>CDF</c>, <c>USD</c>, <c>XOF</c>.</summary>
     public string Currency { get; init; } = string.Empty;
 
     /// <summary>ISO 3166-1 alpha-3 country of the number, e.g. <c>COD</c>.</summary>
@@ -124,7 +124,7 @@ public sealed record PaymentFailure
 /// <summary>Balance of one currency, in the mode of the key.</summary>
 public sealed record Balance
 {
-    /// <summary><c>CDF</c> or <c>USD</c>.</summary>
+    /// <summary>ISO 4217 currency, e.g. <c>CDF</c>, <c>USD</c>, <c>XOF</c>.</summary>
     public string Currency { get; init; } = string.Empty;
 
     /// <summary>String with 2 decimals, e.g. <c>"125000.00"</c>.</summary>
