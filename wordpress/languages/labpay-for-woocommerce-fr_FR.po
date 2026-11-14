@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2026-11-12T18:45:00+00:00\n"
-"PO-Revision-Date: 2026-11-12T18:51:41+00:00\n"
+"PO-Revision-Date: 2026-11-14T10:48:22+00:00\n"
 "Language: fr_FR\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Generator: WP-CLI 2.12.0\n"
@@ -26,8 +26,8 @@ msgstr "https://docs.pay.labyrinthe-rdc.com"
 
 #. Description of the plugin
 #: labpay-for-woocommerce.php:5
-msgid "Mobile Money payments for WooCommerce with LabPay: M-Pesa, Airtel Money and Orange Money in the DR Congo (CDF and USD)."
-msgstr "Paiements Mobile Money pour WooCommerce avec LabPay : M-Pesa, Airtel Money et Orange Money en RD Congo (CDF et USD)."
+msgid "Mobile Money payments for WooCommerce with LabPay: M-Pesa, Airtel Money, Orange Money and more, across Africa in the currency of each open country."
+msgstr "Paiements Mobile Money pour WooCommerce avec LabPay : M-Pesa, Airtel Money, Orange Money et d'autres, en Afrique, dans la devise de chaque pays ouvert."
 
 #. Author of the plugin
 #: labpay-for-woocommerce.php:10
@@ -72,8 +72,8 @@ msgid "LabPay (Mobile Money)"
 msgstr "LabPay (Mobile Money)"
 
 #: includes/class-gateway.php:31
-msgid "M-Pesa, Airtel Money and Orange Money payments in the DR Congo with LabPay. The customer confirms the payment on their phone with their PIN."
-msgstr "Paiements M-Pesa, Airtel Money et Orange Money en RD Congo avec LabPay. Le client confirme le paiement sur son téléphone avec son code PIN."
+msgid "Mobile Money payments (M-Pesa, Airtel Money, Orange Money…) across Africa with LabPay. The customer confirms the payment on their phone with their PIN."
+msgstr "Paiements Mobile Money (M-Pesa, Airtel Money, Orange Money…) en Afrique avec LabPay. Le client confirme le paiement sur son téléphone avec son code PIN."
 
 #: includes/class-gateway.php:41
 #: includes/class-gateway.php:69
@@ -195,8 +195,8 @@ msgstr "Aucun token API de production n'est enregistré : le moyen de paiement e
 #. translators: %s: shop currency code.
 #: includes/class-gateway.php:156
 #, php-format
-msgid "LabPay accepts CDF and USD only; the shop currency is %s: the payment method is hidden at checkout."
-msgstr "LabPay accepte uniquement le CDF et l'USD ; la devise de la boutique est %s : le moyen de paiement est masqué à la validation de commande."
+msgid "The shop currency %s is not accepted (CDF and USD by default; add the currency of a country open on LabPay with the labpay_wc_currencies filter): the payment method is hidden at checkout."
+msgstr "La devise de la boutique %s n'est pas acceptée (CDF et USD par défaut ; ajoutez la devise d'un pays ouvert sur LabPay avec le filtre labpay_wc_currencies) : le moyen de paiement est masqué à la validation de commande."
 
 #: includes/class-gateway.php:159
 msgid "No signing secret: LabPay notifications are refused, statuses are only updated by the waiting page."
@@ -206,100 +206,100 @@ msgstr "Aucun secret de signature : les notifications LabPay sont refusées, les
 msgid "Your site does not use HTTPS: LabPay cannot send it notifications, statuses are only updated by the waiting page."
 msgstr "Votre site n'utilise pas HTTPS : LabPay ne peut pas lui envoyer de notifications, les statuts ne sont mis à jour que par la page d'attente."
 
-#: includes/class-gateway.php:205
+#: includes/class-gateway.php:213
 #: assets/js/blocks.js:97
 msgid "Test mode: no real money moves."
 msgstr "Mode test : aucun argent réel n'est déplacé."
 
-#: includes/class-gateway.php:220
+#: includes/class-gateway.php:228
 #: assets/js/blocks.js:113
 msgid "Mobile Money number"
 msgstr "Numéro Mobile Money"
 
-#: includes/class-gateway.php:220
+#: includes/class-gateway.php:228
 msgid "required"
 msgstr "obligatoire"
 
-#: includes/class-gateway.php:222
+#: includes/class-gateway.php:230
 #: assets/js/blocks.js:115
 msgid "You will receive a confirmation request (PIN) on this phone."
 msgstr "Vous recevrez une demande de confirmation (code PIN) sur ce téléphone."
 
-#: includes/class-gateway.php:225
+#: includes/class-gateway.php:233
 #: assets/js/blocks.js:119
 msgid "Operator"
 msgstr "Opérateur"
 
-#: includes/class-gateway.php:227
+#: includes/class-gateway.php:235
 #: assets/js/blocks.js:129
 msgid "Detect automatically"
 msgstr "Détection automatique"
 
-#: includes/class-gateway.php:240
-#: includes/class-gateway.php:263
+#: includes/class-gateway.php:248
+#: includes/class-gateway.php:271
 #: assets/js/blocks.js:81
 msgid "Enter a valid Mobile Money number (for example 0812345678 or +243812345678)."
 msgstr "Saisissez un numéro Mobile Money valide (par exemple 0812345678 ou +243812345678)."
 
 #. translators: %s: error code.
-#: includes/class-gateway.php:289
+#: includes/class-gateway.php:297
 #, php-format
 msgid "LabPay payment request not accepted: %s."
 msgstr "Demande de paiement LabPay non acceptée : %s."
 
-#: includes/class-gateway.php:302
+#: includes/class-gateway.php:310
 msgid "Your operator refused the payment. Check your balance and your number, then try again."
 msgstr "Votre opérateur a refusé le paiement. Vérifiez votre solde et votre numéro, puis réessayez."
 
 #. translators: 1: LabPay payment ID, 2: masked phone number.
-#: includes/class-gateway.php:315
+#: includes/class-gateway.php:323
 #, php-format
 msgid "LabPay payment %1$s requested: waiting for the customer to confirm on %2$s."
 msgstr "Paiement LabPay %1$s demandé : en attente de la confirmation du client sur le %2$s."
 
-#: includes/class-gateway.php:343
+#: includes/class-gateway.php:351
 msgid "Only a paid order can be refunded with LabPay."
 msgstr "Seule une commande payée peut être remboursée avec LabPay."
 
-#: includes/class-gateway.php:347
+#: includes/class-gateway.php:355
 msgid "The refund amount must be greater than zero."
 msgstr "Le montant du remboursement doit être supérieur à zéro."
 
 #. translators: %s: error from LabPay.
-#: includes/class-gateway.php:365
+#: includes/class-gateway.php:373
 #, php-format
 msgid "LabPay refused the refund: %s"
 msgstr "LabPay a refusé le remboursement : %s"
 
 #. translators: %s: failure code.
-#: includes/class-gateway.php:372
+#: includes/class-gateway.php:380
 #, php-format
 msgid "The LabPay refund failed (%s): no money was sent."
 msgstr "Le remboursement LabPay a échoué (%s) : aucun argent n'a été envoyé."
 
 #. translators: 1: LabPay refund ID, 2: amount, 3: currency, 4: status.
-#: includes/class-gateway.php:379
+#: includes/class-gateway.php:387
 #, php-format
 msgid "LabPay refund %1$s requested: %2$s %3$s (%4$s). Fees are not refunded."
 msgstr "Remboursement LabPay %1$s demandé : %2$s %3$s (%4$s). Les frais ne sont pas remboursés."
 
-#: includes/class-gateway.php:383
+#: includes/class-gateway.php:391
 msgid "completed"
 msgstr "effectué"
 
-#: includes/class-gateway.php:383
+#: includes/class-gateway.php:391
 msgid "in progress, the final status arrives by notification"
 msgstr "en cours, le statut final arrive par notification"
 
-#: includes/class-gateway.php:406
+#: includes/class-gateway.php:414
 msgid "The live API token cannot be a test key (test_…): paste it in \"Test key\"."
 msgstr "Le token de production ne peut pas être une clé de test (test_…) : collez-la dans « Clé de test »."
 
-#: includes/class-gateway.php:416
+#: includes/class-gateway.php:424
 msgid "The test key starts with test_."
 msgstr "La clé de test commence par test_."
 
-#: includes/class-gateway.php:426
+#: includes/class-gateway.php:434
 msgid "The signing secret looks invalid (whsec_…)."
 msgstr "Le secret de signature semble invalide (whsec_…)."
 

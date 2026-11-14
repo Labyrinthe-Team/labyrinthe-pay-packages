@@ -2,7 +2,7 @@
 /**
  * Plugin Name:          LabPay for WooCommerce
  * Plugin URI:           https://docs.pay.labyrinthe-rdc.com
- * Description:          Mobile Money payments for WooCommerce with LabPay: M-Pesa, Airtel Money and Orange Money in the DR Congo (CDF and USD).
+ * Description:          Mobile Money payments for WooCommerce with LabPay: M-Pesa, Airtel Money, Orange Money and more, across Africa in the currency of each open country.
  * Version:              0.1.0
  * Requires at least:    6.4
  * Requires PHP:         8.1
