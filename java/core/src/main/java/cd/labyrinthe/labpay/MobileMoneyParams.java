@@ -233,7 +233,8 @@ public final class MobileMoneyParams {
     }
 
     /**
-     * ISO alpha-3 country of the number (without it: a local number belongs to the platform's default country, an international number to the country of its dial code).
+     * ISO alpha-3 country of the number (without it: a local number belongs to the platform's
+     * default country, an international number to the country of its dial code).
      *
      * @param country e.g. {@code COD}
      * @return this builder
