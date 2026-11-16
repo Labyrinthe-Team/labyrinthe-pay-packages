@@ -45,6 +45,13 @@
     </developer>
   </developers>
 
+  <scm>
+    <connection>scm:git:https://github.com/Labyrinthe-Team/labyrinthe-pay-packages.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/Labyrinthe-Team/labyrinthe-pay-packages.git</developerConnection>
+    <url>https://github.com/Labyrinthe-Team/labyrinthe-pay-packages/tree/master/java</url>
+    <tag>HEAD</tag>
+  </scm>
+
   <modules>
     <module>core</module>
     <module>spring-boot-starter</module>
@@ -251,6 +258,52 @@
                 </goals>
               </execution>
             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- Publication sur Maven Central (java-release.yml) : signature GPG et envoi au portail Central.
+         Le module examples n'est jamais publié. -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.8</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <!-- La phrase de passe vient de MAVEN_GPG_PASSPHRASE (jamais en ligne de commande). -->
+                  <bestPractices>true</bestPractices>
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.10.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <!-- Identifiants dans settings.xml, serveur « central » (MAVEN_CENTRAL_USERNAME / PASSWORD). -->
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>true</autoPublish>
+              <waitUntil>published</waitUntil>
+              <excludeArtifacts>
+                <artifact>labpay-examples</artifact>
+              </excludeArtifacts>
+            </configuration>
           </plugin>
         </plugins>
       </build>

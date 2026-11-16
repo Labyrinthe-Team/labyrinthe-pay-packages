@@ -1,7 +1,7 @@
 <Project>
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
-  <!-- Réglages des packages NuGet (src/*). Aucun n'est publié pour l'instant. -->
+  <!-- Réglages des packages NuGet (src/*). Publiés par dotnet-release.yml (tag dotnet-vX.Y.Z). -->
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -9,6 +9,9 @@
     <PackageTags>labpay;payments;mobile-money;mpesa;airtel-money;orange-money;drc;rdc;congo;africa</PackageTags>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!-- SourceLink (inclus dans le SDK .NET 8) : lien vers le dépôt GitHub dans le package et les symboles. -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
   <ItemGroup>
