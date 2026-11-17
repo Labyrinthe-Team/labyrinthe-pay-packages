@@ -4,7 +4,7 @@
 #   php/      → labyrinthe-pay-php      (labyrinthe/labpay-php)
 #   laravel/  → labyrinthe-pay-laravel  (labyrinthe/labpay-laravel)
 #
-# - push sur master    : la branche main du miroir est mise à jour (versions dev-main) ;
+# - push sur master (ou lancement manuel) : la branche main du miroir est mise à jour (versions dev-main) ;
 # - tag php-vX.Y.Z     : le miroir PHP reçoit le tag vX.Y.Z (nouvelle version Packagist) ;
 # - tag laravel-vX.Y.Z : idem pour le miroir Laravel.
 #
@@ -19,6 +19,8 @@ on:
     tags:
       - 'php-v*'
       - 'laravel-v*'
+  # Lancement manuel (Actions > split > Run workflow) : met à jour la branche main des miroirs.
+  workflow_dispatch:
 
 permissions:
   contents: read
