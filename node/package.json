@@ -16,6 +16,11 @@
     "sdk"
   ],
   "homepage": "https://docs.pay.labyrinthe-rdc.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Labyrinthe-Team/labyrinthe-pay-packages.git",
+    "directory": "node"
+  },
   "bugs": {
     "email": "contact@labyrinthe-rdc.com"
   },
