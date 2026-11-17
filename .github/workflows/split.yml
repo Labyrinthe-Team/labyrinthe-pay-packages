@@ -1,8 +1,8 @@
 # Publie les packages Composer dans leurs dépôts miroirs en lecture seule, que Packagist lit
 # (Packagist exige un composer.json à la racine du dépôt) :
 #
-#   php/      → labyrinthe-pay-php      (labyrinthe/labpay-php)
-#   laravel/  → labyrinthe-pay-laravel  (labyrinthe/labpay-laravel)
+#   php/      → labyrinthe-pay-package-php      (labyrinthe/labpay-php)
+#   laravel/  → labyrinthe-pay-package-laravel  (labyrinthe/labpay-laravel)
 #
 # - push sur master (ou lancement manuel) : la branche main du miroir est mise à jour (versions dev-main) ;
 # - tag php-vX.Y.Z     : le miroir PHP reçoit le tag vX.Y.Z (nouvelle version Packagist) ;
@@ -37,8 +37,8 @@ jobs:
       fail-fast: false
       matrix:
         package:
-          - { directory: php, repository: labyrinthe-pay-php, tag_prefix: php-v }
-          - { directory: laravel, repository: labyrinthe-pay-laravel, tag_prefix: laravel-v }
+          - { directory: php, repository: labyrinthe-pay-package-php, tag_prefix: php-v }
+          - { directory: laravel, repository: labyrinthe-pay-package-laravel, tag_prefix: laravel-v }
     steps:
       - uses: actions/checkout@v4
         with:

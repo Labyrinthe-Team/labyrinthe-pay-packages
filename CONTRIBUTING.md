@@ -56,8 +56,8 @@ prefixed with its folder:
 
 | Tag in this repository | Effect |
 |---|---|
-| `php-v1.2.3` | `php/` is pushed to the mirror `labyrinthe-pay-php` with the tag `v1.2.3` → Packagist `labyrinthe/labpay-php` 1.2.3 (`split.yml`) |
-| `laravel-v1.2.3` | `laravel/` is pushed to the mirror `labyrinthe-pay-laravel` with the tag `v1.2.3` → Packagist `labyrinthe/labpay-laravel` 1.2.3 (`split.yml`) |
+| `php-v1.2.3` | `php/` is pushed to the mirror `labyrinthe-pay-package-php` with the tag `v1.2.3` → Packagist `labyrinthe/labpay-php` 1.2.3 (`split.yml`) |
+| `laravel-v1.2.3` | `laravel/` is pushed to the mirror `labyrinthe-pay-package-laravel` with the tag `v1.2.3` → Packagist `labyrinthe/labpay-laravel` 1.2.3 (`split.yml`) |
 | `node-v1.2.3` | `node/` is published to npm as `@labyrinthe/labpay` 1.2.3 (`node-release.yml`; a prerelease such as `node-v1.3.0-beta.1` gets the `next` dist-tag) |
 | `python-v1.2.3` | `python/` is published to PyPI as `labpay` 1.2.3 (`python-release.yml`, Trusted Publishing; prereleases use PEP 440: `python-v1.3.0rc1`) |
 | `dotnet-v1.2.3` | `dotnet/` is published to NuGet as `Labyrinthe.LabPay` and `Labyrinthe.LabPay.AspNetCore` 1.2.3, with symbol packages (`dotnet-release.yml`) |
@@ -84,7 +84,7 @@ Before tagging:
 One-time setup (GitHub: Settings > Secrets and variables / Environments of this repository):
 
 - `split.yml`: secret `MONOREPO_SPLIT_TOKEN`, a fine-grained token with *Contents: read and write* on
-  `labyrinthe-pay-php` and `labyrinthe-pay-laravel`. Each mirror is submitted once on Packagist, with the GitHub
+  `labyrinthe-pay-package-php` and `labyrinthe-pay-package-laravel`. Each mirror is submitted once on Packagist, with the GitHub
   hook enabled.
 - `node-release.yml`: environment `npm` with the secret `NPM_TOKEN` (granular token, publish rights on the
   `@labyrinthe` scope). Provenance requires this repository to stay public.
