@@ -74,15 +74,7 @@ final class PluginTest extends TestCase {
 		$this->assertNull( Phone::provider( '' ) );
 	}
 
-	public function test_french_fallback_for_other_french_locales(): void {
-		$plugin = Plugin::instance();
-
-		$this->assertSame( 'fr_FR', $plugin->french_fallback( 'fr_BE', 'labpay-for-woocommerce' ) );
-		$this->assertSame( 'en_US', $plugin->french_fallback( 'en_US', 'labpay-for-woocommerce' ) );
-		$this->assertSame( 'fr_BE', $plugin->french_fallback( 'fr_BE', 'other' ) );
-	}
-
-	public function test_french_translation_is_shipped(): void {
+	public function test_french_translation_file_loads(): void {
 		$this->assertFileExists( LABPAY_WC_DIR . 'languages/labpay-for-woocommerce-fr_FR.mo' );
 		unload_textdomain( 'labpay-for-woocommerce' );
 		load_textdomain( 'labpay-for-woocommerce', LABPAY_WC_DIR . 'languages/labpay-for-woocommerce-fr_FR.mo', 'fr_FR' );

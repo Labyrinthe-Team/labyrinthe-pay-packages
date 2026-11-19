@@ -30,7 +30,7 @@ $include = array(
 	'LICENSE',
 	'includes',
 	'assets',
-	'languages',
+	'languages/labpay-for-woocommerce.pot', // Traductions : translate.wordpress.org (pas de .po / .mo livrés).
 	'vendor-prefixed',
 );
 
@@ -59,7 +59,7 @@ if ( ! in_array( '--skip-prefix', $argv, true ) ) {
 		exit( $code );
 	}
 }
-foreach ( array( 'vendor-prefixed/autoload.php', 'languages/labpay-for-woocommerce.pot', 'languages/labpay-for-woocommerce-fr_FR.mo' ) as $required ) {
+foreach ( array( 'vendor-prefixed/autoload.php', 'languages/labpay-for-woocommerce.pot' ) as $required ) {
 	if ( ! is_file( $root . '/' . $required ) ) {
 		fail( "$required is missing (composer install, composer i18n)." );
 	}
@@ -123,7 +123,7 @@ for ( $i = 0; $i < $check->numFiles; $i++ ) {
 	$names[] = (string) $check->getNameIndex( $i );
 }
 $check->close();
-foreach ( array( 'labpay-for-woocommerce.php', 'uninstall.php', 'readme.txt', 'LICENSE', 'vendor-prefixed/autoload.php', 'vendor-prefixed/labyrinthe/labpay-php/src/Client.php', 'languages/labpay-for-woocommerce-fr_FR.mo', 'assets/js/blocks.js' ) as $expected ) {
+foreach ( array( 'labpay-for-woocommerce.php', 'uninstall.php', 'readme.txt', 'LICENSE', 'vendor-prefixed/autoload.php', 'vendor-prefixed/labyrinthe/labpay-php/src/Client.php', 'assets/js/blocks.js' ) as $expected ) {
 	if ( ! in_array( LABPAY_WC_SLUG . '/' . $expected, $names, true ) ) {
 		fail( "The zip does not contain $expected." );
 	}

@@ -6,6 +6,13 @@ The wordpress.org changelog lives in `readme.txt`.
 
 ## [Unreleased]
 
+### Changed
+- wordpress.org review: translations now come from translate.wordpress.org. The zip no longer ships the compiled
+  `.po` / `.mo` / `.json` / `.l10n.php` files (only the `.pot` template) and the plugin no longer calls
+  `load_plugin_textdomain()` (WordPress loads the translations itself). The French translation stays in `languages/` and
+  is imported on translate.wordpress.org.
+- The "WooCommerce is required" notice only appears on the dashboard and the Plugins screen.
+
 ## [0.1.0] - 2026-11-12
 
 First preview, built on `labyrinthe/labpay-php` 0.1.0 (API V2, specification 2.0.0). Not published.

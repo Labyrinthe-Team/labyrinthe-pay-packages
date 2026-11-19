@@ -105,10 +105,6 @@ final class Plugin {
 	 * Branche les hooks.
 	 */
 	private function register_hooks(): void {
-		add_action( 'init', array( $this, 'load_textdomain' ), 0 );
-		add_filter( 'plugin_locale', array( $this, 'french_fallback' ), 10, 2 );
-		add_filter( 'load_script_translation_file', array( $this, 'french_script_fallback' ), 10, 3 );
-
 		if ( ! class_exists( 'WooCommerce' ) || ! class_exists( 'WC_Payment_Gateway' ) ) {
 			add_action( 'admin_notices', array( $this, 'woocommerce_notice' ) );
 
@@ -198,49 +194,11 @@ final class Plugin {
 		if ( ! current_user_can( 'activate_plugins' ) ) {
 			return;
 		}
+		// Avis limité au tableau de bord et à la page des extensions (règle 11 de wordpress.org).
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( null === $screen || ! in_array( $screen->id, array( 'dashboard', 'plugins' ), true ) ) {
+			return;
+		}
 		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html__( 'LabPay for WooCommerce needs WooCommerce: install and activate it.', 'labpay-for-woocommerce' ) );
-	}
-
-	/**
-	 * Traductions livrées avec le plugin (languages/).
-	 */
-	public function load_textdomain(): void {
-		// Traductions livrées : elles servent avant les paquets de translate.wordpress.org, hors wordpress.org et pour les variantes du français.
-		load_plugin_textdomain( 'labpay-for-woocommerce', false, dirname( plugin_basename( LABPAY_WC_FILE ) ) . '/languages' ); // phpcs:ignore PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound
-	}
-
-	/**
-	 * Site en français d'une autre variante (fr_BE, fr_CA…, il n'existe pas de fr_CD) : on
-	 * charge la traduction fr_FR livrée plutôt que d'afficher l'anglais.
-	 *
-	 * @param string $locale Langue.
-	 * @param string $domain Domaine de traduction.
-	 */
-	public function french_fallback( $locale, $domain ): string {
-		$locale = (string) $locale;
-		if ( 'labpay-for-woocommerce' !== $domain || 'fr_FR' === $locale || 0 !== strpos( $locale, 'fr' ) ) {
-			return $locale;
-		}
-		$own  = LABPAY_WC_DIR . 'languages/labpay-for-woocommerce-' . $locale . '.mo';
-		$pack = WP_LANG_DIR . '/plugins/labpay-for-woocommerce-' . $locale . '.mo';
-
-		return is_file( $own ) || is_file( $pack ) ? $locale : 'fr_FR';
-	}
-
-	/**
-	 * Même repli pour les traductions JavaScript (paiement en blocs).
-	 *
-	 * @param string|false $file   Fichier de traduction.
-	 * @param string       $handle Script.
-	 * @param string       $domain Domaine.
-	 * @return string|false
-	 */
-	public function french_script_fallback( $file, $handle, $domain ) {
-		if ( 'labpay-for-woocommerce' !== $domain || ! is_string( $file ) || is_file( $file ) ) {
-			return $file;
-		}
-		$fallback = (string) preg_replace( '/-fr_[A-Z]{2}(_[a-z]+)?-/', '-fr_FR-', $file );
-
-		return is_file( $fallback ) ? $fallback : $file;
 	}
 }

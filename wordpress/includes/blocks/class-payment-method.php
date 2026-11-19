@@ -61,7 +61,7 @@ final class Payment_Method extends AbstractPaymentMethodType {
 			(string) ( $asset['version'] ?? LABPAY_WC_VERSION ),
 			true
 		);
-		wp_set_script_translations( 'labpay-wc-blocks', 'labpay-for-woocommerce', LABPAY_WC_DIR . 'languages' );
+		wp_set_script_translations( 'labpay-wc-blocks', 'labpay-for-woocommerce' );
 		wp_register_style( 'labpay-wc', LABPAY_WC_URL . 'assets/css/labpay.css', array(), LABPAY_WC_VERSION );
 		wp_enqueue_style( 'labpay-wc' );
 
